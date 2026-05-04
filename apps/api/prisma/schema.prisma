@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(MEMBER)
+  createdAt    DateTime @default(now())
+
+  flows             Flow[]
+  demandsRequested  Demand[]        @relation("RequestedBy")
+  demandsAssigned   Demand[]        @relation("AssignedTo")
+  defaultOnStages   Stage[]
+  demandHistories   DemandHistory[]
+  comments          Comment[]
+}
+
+model Flow {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime @default(now())
+
+  createdBy User    @relation(fields: [createdById], references: [id])
+  stages    Stage[]
+  demands   Demand[]
+}
+
+model Stage {
+  id                String  @id @default(uuid())
+  name              String
+  color             String
+  order             Int
+  flowId            String
+  defaultAssigneeId String?
+
+  flow            Flow            @relation(fields: [flowId], references: [id])
+  defaultAssignee User?           @relation(fields: [defaultAssigneeId], references: [id])
+  demands         Demand[]
+  historiesFrom   DemandHistory[] @relation("FromStage")
+  historiesTo     DemandHistory[] @relation("ToStage")
+  comments        Comment[]
+}
+
+model Demand {
+  id             String    @id @default(uuid())
+  title          String
+  description    String?
+  flowId         String
+  currentStageId String
+  requestedById  String
+  assignedToId   String?
+  dueDate        DateTime?
+  createdAt      DateTime  @default(now())
+
+  flow         Flow            @relation(fields: [flowId], references: [id])
+  currentStage Stage           @relation(fields: [currentStageId], references: [id])
+  requestedBy  User            @relation("RequestedBy", fields: [requestedById], references: [id])
+  assignedTo   User?           @relation("AssignedTo", fields: [assignedToId], references: [id])
+  history      DemandHistory[]
+  comments     Comment[]
+}
+
+model DemandHistory {
+  id          String   @id @default(uuid())
+  demandId    String
+  fromStageId String?
+  toStageId   String
+  movedById   String
+  movedAt     DateTime @default(now())
+  comment     String?
+
+  demand    Demand @relation(fields: [demandId], references: [id])
+  fromStage Stage? @relation("FromStage", fields: [fromStageId], references: [id])
+  toStage   Stage  @relation("ToStage", fields: [toStageId], references: [id])
+  movedBy   User   @relation(fields: [movedById], references: [id])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  demandId  String
+  stageId   String
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  demand Demand @relation(fields: [demandId], references: [id])
+  stage  Stage  @relation(fields: [stageId], references: [id])
+  author User   @relation(fields: [authorId], references: [id])
+}
