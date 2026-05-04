@@ -2,6 +2,9 @@
   "name": "@flowdesk/api",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts"
+  },
   "dependencies": {
     "@prisma/client": "^7.8.0",
     "bcrypt": "^6.0.0",
