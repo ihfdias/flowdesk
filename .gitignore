@@ -1,0 +1,26 @@
+# Dependências
+node_modules/
+
+# Build / compilação TypeScript
+dist/
+build/
+
+# Variáveis de ambiente (NUNCA versionar)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Cache do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Cache de ferramentas
+.turbo/
+.cache/
+
+# Cobertura de testes
+coverage/
