@@ -27,6 +27,8 @@ export default function DemandModal({ demand, flow, onClose, onAdvance }: Props)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [comments, setComments] = useState<Comment[]>([])
   const [comment, setComment] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [commentError, setCommentError] = useState<string | null>(null)
   const [aiThinking, setAiThinking] = useState(false)
   const [aiResult, setAiResult] = useState<string | null>(null)
 
@@ -43,11 +45,19 @@ export default function DemandModal({ demand, flow, onClose, onAdvance }: Props)
 
   const submitComment = async (e: { preventDefault(): void }) => {
     e.preventDefault()
-    if (!comment.trim()) return
-    await api.post(`/api/demands/${demand.id}/comments`, { content: comment })
-    setComment('')
-    const res = await api.get(`/api/demands/${demand.id}`)
-    setComments(res.data.comments ?? [])
+    if (!comment.trim() || submitting) return
+    setSubmitting(true)
+    setCommentError(null)
+    try {
+      await api.post(`/api/demands/${demand.id}/comments`, { content: comment })
+      setComment('')
+      const res = await api.get(`/api/demands/${demand.id}`)
+      setComments(res.data.comments ?? [])
+    } catch {
+      setCommentError('Não foi possível enviar. Tente novamente.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const summarize = () => {
@@ -271,35 +281,42 @@ export default function DemandModal({ demand, flow, onClose, onAdvance }: Props)
         </div>
 
         {/* ── Footer: comentar + avançar ── */}
-        <div style={{
-          padding: '12px 16px',
-          borderTop: `1px solid ${BORDER}`,
-          display: 'flex', gap: 8,
-        }}>
+        <div style={{ borderTop: `1px solid ${BORDER}` }}>
+          {commentError && (
+            <div style={{ padding: '6px 16px', fontSize: 12, color: 'oklch(0.55 0.18 28)', fontFamily: 'JetBrains Mono, monospace' }}>
+              {commentError}
+            </div>
+          )}
+          <div style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
           <form onSubmit={submitComment} style={{ flex: 1, display: 'flex', gap: 8 }}>
             <input
               value={comment}
-              onChange={e => setComment(e.target.value)}
+              onChange={e => { setComment(e.target.value); setCommentError(null) }}
               placeholder="Diga algo construtivo…"
+              disabled={submitting}
               style={{
                 flex: 1, padding: '8px 12px', borderRadius: 6,
                 border: `1px solid ${BORDER}`,
                 background: 'oklch(0.99 0 0)',
                 color: FG, fontFamily: 'inherit', fontSize: 13,
                 outline: 'none', transition: 'border-color .15s',
+                opacity: submitting ? 0.6 : 1,
               }}
               onFocus={e => { e.target.style.borderColor = stageColor(hue, 'solid') }}
               onBlur={e => { e.target.style.borderColor = BORDER }}
             />
             <button
               type="submit"
+              disabled={submitting || !comment.trim()}
               style={{
                 background: 'transparent', border: `1px solid ${BORDER}`,
                 color: FG, padding: '8px 14px', borderRadius: 6,
-                fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
+                fontSize: 13, cursor: submitting ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', fontWeight: 500,
+                opacity: submitting || !comment.trim() ? 0.5 : 1,
               }}
             >
-              Comentar
+              {submitting ? '…' : 'Comentar'}
             </button>
           </form>
 
@@ -323,6 +340,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance }: Props)
               Avançar →
             </button>
           )}
+          </div>
         </div>
       </div>
     </div>

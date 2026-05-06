@@ -5,6 +5,7 @@ import { Flow, Demand, User } from '../lib/types'
 import { getStageHue, stageColor } from '../lib/colors'
 import DemandCard from '../components/board/DemandCard'
 import DemandModal from '../components/board/DemandModal'
+import NewDemandModal from '../components/board/NewDemandModal'
 
 const STAGE_GLYPHS = ['◐', '✺', '◇', '◈', '●', '◉', '◎']
 const getGlyph = (order: number) => STAGE_GLYPHS[order % STAGE_GLYPHS.length]
@@ -41,6 +42,8 @@ export default function BoardPage() {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverStage, setDragOverStage] = useState<string | null>(null)
   const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null)
+  const [showNewDemand, setShowNewDemand] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
     api.get('/api/flows')
@@ -83,11 +86,20 @@ export default function BoardPage() {
     }
   }, [draggingId, demands, selectedFlow])
 
+  const showToast = useCallback((msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2500)
+  }, [])
+
   const handleAdvance = useCallback(async (demandId: string) => {
-    await api.patch(`/api/demands/${demandId}/advance`, {})
-    await reloadDemands()
-    setSelectedDemand(null)
-  }, [reloadDemands])
+    try {
+      await api.patch(`/api/demands/${demandId}/advance`, {})
+      await reloadDemands()
+      setSelectedDemand(null)
+    } catch {
+      showToast('Erro ao avançar demanda. Tente novamente.')
+    }
+  }, [reloadDemands, showToast])
 
   // Unique team members from demand data for header avatars
   const teamMembers = useMemo<User[]>(() => {
@@ -157,22 +169,28 @@ export default function BoardPage() {
         )}
 
         {/* Editar fluxo */}
-        <button style={{
-          background: 'transparent', color: C.fg,
-          border: `1px solid ${C.border}`, padding: '7px 12px', borderRadius: 6,
-          fontFamily: 'inherit', fontSize: 12, fontWeight: 500, cursor: 'pointer',
-          letterSpacing: -0.1,
-        }}>
+        <button
+          onClick={() => showToast('Em breve — editor de fluxo chegando.')}
+          style={{
+            background: 'transparent', color: C.fg,
+            border: `1px solid ${C.border}`, padding: '7px 12px', borderRadius: 6,
+            fontFamily: 'inherit', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+            letterSpacing: -0.1,
+          }}
+        >
           Editar fluxo
         </button>
 
         {/* Nova demanda */}
-        <button style={{
-          background: C.fg, color: 'oklch(0.98 0 0)',
-          border: 'none', padding: '8px 14px', borderRadius: 6,
-          fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 6,
-        }}>
+        <button
+          onClick={() => setShowNewDemand(true)}
+          style={{
+            background: C.fg, color: 'oklch(0.98 0 0)',
+            border: 'none', padding: '8px 14px', borderRadius: 6,
+            fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}
+        >
           <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Nova demanda
         </button>
 
@@ -313,6 +331,31 @@ export default function BoardPage() {
           onClose={() => setSelectedDemand(null)}
           onAdvance={handleAdvance}
         />
+      )}
+
+      {showNewDemand && selectedFlow && (
+        <NewDemandModal
+          flow={selectedFlow}
+          onClose={() => setShowNewDemand(false)}
+          onCreated={async () => {
+            setShowNewDemand(false)
+            await reloadDemands()
+          }}
+        />
+      )}
+
+      {toast && (
+        <div style={{
+          position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)',
+          background: 'oklch(0.18 0.01 60)', color: 'oklch(0.95 0 0)',
+          padding: '10px 20px', borderRadius: 8,
+          fontSize: 13, fontFamily: 'JetBrains Mono, monospace', letterSpacing: 0.2,
+          boxShadow: '0 4px 20px rgba(0,0,0,.2)',
+          zIndex: 200, whiteSpace: 'nowrap',
+          animation: 'ndIn .2s ease',
+        }}>
+          {toast}
+        </div>
       )}
     </div>
   )

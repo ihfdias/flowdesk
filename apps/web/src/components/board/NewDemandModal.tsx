@@ -1,0 +1,191 @@
+import { useState } from 'react'
+import api from '../../lib/api'
+import { Flow } from '../../lib/types'
+
+interface Props {
+  flow: Flow
+  onClose: () => void
+  onCreated: () => void
+}
+
+const BORDER = 'oklch(0.90 0.005 60)'
+const FG = 'oklch(0.18 0.01 60)'
+const MUTED = 'oklch(0.50 0.01 60)'
+const ACCENT = 'oklch(0.62 0.20 28)'
+
+export default function NewDemandModal({ flow, onClose, onCreated }: Props) {
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSubmit = async (e: { preventDefault(): void }) => {
+    e.preventDefault()
+    if (!title.trim() || loading) return
+    setLoading(true)
+    setError(null)
+    try {
+      await api.post('/api/demands', {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        flowId: flow.id,
+        dueDate: dueDate || undefined,
+      })
+      onCreated()
+    } catch {
+      setError('Não foi possível criar a demanda. Tente novamente.')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'oklch(0.18 0.01 60 / 0.4)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: 480,
+          background: 'oklch(1 0 0)',
+          borderRadius: 12,
+          boxShadow: '0 24px 80px rgba(0,0,0,.16)',
+          display: 'flex', flexDirection: 'column',
+          animation: 'ndIn .2s cubic-bezier(.2,.7,.3,1)',
+        }}
+      >
+        <style>{`@keyframes ndIn{from{transform:scale(.96) translateY(8px);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
+
+        {/* Header */}
+        <div style={{ padding: '24px 28px 20px', borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{
+              fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
+              color: MUTED, letterSpacing: 0.6, textTransform: 'uppercase',
+            }}>
+              {flow.name}
+            </span>
+            <button
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: MUTED, lineHeight: 1, padding: '0 2px' }}
+            >
+              ×
+            </button>
+          </div>
+          <h2 style={{
+            margin: 0,
+            fontFamily: 'Instrument Serif, serif',
+            fontSize: 28, fontWeight: 400, fontStyle: 'italic',
+            letterSpacing: -0.6, lineHeight: 1.1,
+            color: FG,
+          }}>
+            Nova demanda.
+          </h2>
+        </div>
+
+        {/* Formulário */}
+        <form onSubmit={handleSubmit} style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+
+          <Field label="Título *">
+            <input
+              autoFocus
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Ex: Campanha de lançamento…"
+              required
+              style={inputStyle}
+              onFocus={e => { e.target.style.borderColor = ACCENT }}
+              onBlur={e => { e.target.style.borderColor = BORDER }}
+            />
+          </Field>
+
+          <Field label="Descrição">
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Contexto, objetivo, detalhes…"
+              rows={3}
+              style={{ ...inputStyle, resize: 'vertical' }}
+              onFocus={e => { e.target.style.borderColor = ACCENT }}
+              onBlur={e => { e.target.style.borderColor = BORDER }}
+            />
+          </Field>
+
+          <Field label="Prazo">
+            <input
+              type="date"
+              value={dueDate}
+              onChange={e => setDueDate(e.target.value)}
+              style={{ ...inputStyle, colorScheme: 'light' }}
+              onFocus={e => { e.target.style.borderColor = ACCENT }}
+              onBlur={e => { e.target.style.borderColor = BORDER }}
+            />
+          </Field>
+
+          {error && (
+            <p style={{ margin: 0, fontSize: 12, color: 'oklch(0.55 0.18 28)', fontFamily: 'JetBrains Mono, monospace' }}>
+              {error}
+            </p>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 4 }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                background: 'transparent', border: `1px solid ${BORDER}`,
+                color: MUTED, padding: '9px 18px', borderRadius: 6,
+                fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !title.trim()}
+              style={{
+                background: loading || !title.trim() ? 'oklch(0.65 0.01 60)' : FG,
+                color: '#fff', border: 'none',
+                padding: '9px 20px', borderRadius: 6,
+                fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
+                cursor: loading || !title.trim() ? 'not-allowed' : 'pointer',
+                transition: 'background .15s',
+              }}
+            >
+              {loading ? 'Criando…' : 'Criar demanda'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <label style={{
+        fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
+        color: MUTED, letterSpacing: 0.6, textTransform: 'uppercase',
+      }}>
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+const inputStyle: React.CSSProperties = {
+  padding: '10px 12px', borderRadius: 6,
+  border: `1px solid ${BORDER}`,
+  fontFamily: 'Inter, system-ui, sans-serif', fontSize: 14, color: FG,
+  outline: 'none', transition: 'border-color .15s',
+  background: 'oklch(0.99 0 0)',
+  width: '100%', boxSizing: 'border-box',
+}
