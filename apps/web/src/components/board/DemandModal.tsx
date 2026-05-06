@@ -1,5 +1,7 @@
-import { Demand, Flow } from '../../lib/types'
-import { getStageHue } from '../../lib/colors'
+import { useState, useEffect } from 'react'
+import api from '../../lib/api'
+import { Demand, Flow, HistoryEntry, Comment } from '../../lib/types'
+import { getStageHue, stageColor } from '../../lib/colors'
 import StageChip from '../primitives/StageChip'
 import Avatar from '../primitives/Avatar'
 import DueDate from '../primitives/DueDate'
@@ -11,184 +13,331 @@ interface Props {
   onAdvance: (demandId: string) => Promise<void>
 }
 
-const C = {
-  overlay: 'rgba(0,0,0,0.25)',
-  bg: 'oklch(1 0 0)',
-  border: 'oklch(0.90 0.005 60)',
-  muted: 'oklch(0.50 0.01 60)',
-  subtle: 'oklch(0.96 0.005 60)',
-  accent: 'oklch(0.62 0.20 28)',
-}
+type TimelineEvent =
+  | { kind: 'history'; entry: HistoryEntry; date: string }
+  | { kind: 'comment'; entry: Comment; date: string }
+
+const MUTED = 'oklch(0.50 0.01 60)'
+const BORDER = 'oklch(0.90 0.005 60)'
+const FG = 'oklch(0.18 0.01 60)'
 
 export default function DemandModal({ demand, flow, onClose, onAdvance }: Props) {
   const hue = getStageHue(demand.currentStage.order)
+
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [comments, setComments] = useState<Comment[]>([])
+  const [comment, setComment] = useState('')
+  const [aiThinking, setAiThinking] = useState(false)
+  const [aiResult, setAiResult] = useState<string | null>(null)
+
+  useEffect(() => {
+    api.get(`/api/demands/${demand.id}`).then(res => {
+      setHistory(res.data.history ?? [])
+      setComments(res.data.comments ?? [])
+    })
+  }, [demand.id])
 
   const currentIdx = flow.stages.findIndex(s => s.id === demand.currentStageId)
   const nextStage = flow.stages[currentIdx + 1]
   const isLast = !nextStage
 
+  const submitComment = async (e: { preventDefault(): void }) => {
+    e.preventDefault()
+    if (!comment.trim()) return
+    await api.post(`/api/demands/${demand.id}/comments`, { content: comment })
+    setComment('')
+    const res = await api.get(`/api/demands/${demand.id}`)
+    setComments(res.data.comments ?? [])
+  }
+
+  const summarize = () => {
+    setAiThinking(true)
+    setAiResult(null)
+    setTimeout(() => {
+      setAiThinking(false)
+      setAiResult(
+        `Demanda em ${demand.currentStage.name}, solicitada por ${demand.requestedBy.name}.` +
+        (demand.assignedTo ? ` ${demand.assignedTo.name} está tocando.` : ' Sem responsável atribuído.')
+      )
+    }, 1400)
+  }
+
+  const timelineEvents: TimelineEvent[] = [
+    ...history.map(h => ({ kind: 'history' as const, entry: h, date: h.movedAt })),
+    ...comments.map(c => ({ kind: 'comment' as const, entry: c, date: c.createdAt })),
+  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
   return (
     <div
       onClick={onClose}
       style={{
-        position: 'fixed', inset: 0,
-        background: C.overlay,
-        backdropFilter: 'blur(2px)',
-        zIndex: 100,
+        position: 'fixed', inset: 0, zIndex: 100,
+        background: 'oklch(0.18 0.01 60 / 0.5)',
+        backdropFilter: 'blur(6px)',
         display: 'flex', justifyContent: 'flex-end',
       }}
     >
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '62%', maxWidth: 720,
-          height: '100%',
-          background: C.bg,
-          borderLeft: `1px solid ${C.border}`,
+          width: '62%', maxWidth: 720, height: '100%',
+          background: 'oklch(1 0 0)', color: FG,
           display: 'flex', flexDirection: 'column',
-          animation: 'slideIn .2s ease',
+          boxShadow: '-20px 0 60px rgba(0,0,0,.2)',
+          animation: 'fdSlide .25s cubic-bezier(.2,.7,.3,1)',
         }}
       >
-        {/* Header */}
+        <style>{`@keyframes fdSlide{from{transform:translateX(100%)}to{transform:translateX(0)}}`}</style>
+
+        {/* ── Header (colorido com stageColor softer) ── */}
         <div style={{
-          padding: '20px 28px 16px',
-          borderBottom: `1px solid ${C.border}`,
-          display: 'flex', flexDirection: 'column', gap: 10,
+          padding: '20px 28px',
+          borderBottom: `1px solid ${BORDER}`,
+          background: stageColor(hue, 'softer'),
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <StageChip name={demand.currentStage.name} hue={hue} size="sm" />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{
-                fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
-                color: C.muted, letterSpacing: 0.3,
-              }}>
-                #{demand.id.slice(0, 8).toUpperCase()}
-              </span>
-              <button
-                onClick={onClose}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 20, color: C.muted, lineHeight: 1,
-                  padding: '0 2px',
-                }}
-              >
-                ×
-              </button>
-            </div>
+            <span style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.4 }}>
+              #{demand.id.slice(0, 8).toUpperCase()}
+            </span>
+            <div style={{ flex: 1 }} />
+            <button
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: MUTED, lineHeight: 1, padding: 4 }}
+            >
+              ×
+            </button>
           </div>
 
           <h2 style={{
             margin: 0,
             fontFamily: 'Instrument Serif, serif',
-            fontSize: 28, fontWeight: 400, fontStyle: 'italic',
-            lineHeight: 1.2, letterSpacing: -0.3,
-            color: 'oklch(0.15 0.01 60)',
+            fontSize: 32, fontWeight: 400, fontStyle: 'italic',
+            letterSpacing: -0.8, lineHeight: 1.1,
           }}>
             {demand.title}
           </h2>
-        </div>
 
-        {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
-
-          {/* Meta */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16,
-            padding: 16,
-            background: C.subtle,
-            borderRadius: 8,
-          }}>
-            <MetaField label="Solicitante">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Avatar name={demand.requestedBy.name} size={18} />
-                <span style={{ fontSize: 13 }}>{demand.requestedBy.name}</span>
-              </div>
-            </MetaField>
-            <MetaField label="Responsável">
-              {demand.assignedTo ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Avatar name={demand.assignedTo.name} size={18} />
-                  <span style={{ fontSize: 13 }}>{demand.assignedTo.name}</span>
-                </div>
-              ) : (
-                <span style={{ fontSize: 13, color: C.muted }}>—</span>
-              )}
-            </MetaField>
-            <MetaField label="Prazo">
-              {demand.dueDate
-                ? <DueDate date={demand.dueDate} />
-                : <span style={{ fontSize: 13, color: C.muted }}>—</span>
-              }
-            </MetaField>
-          </div>
-
-          {/* Description */}
           {demand.description && (
-            <div>
-              <SectionLabel>Descrição</SectionLabel>
-              <p style={{ margin: 0, fontSize: 14, lineHeight: 1.65, color: 'oklch(0.30 0.01 60)' }}>
-                {demand.description}
-              </p>
-            </div>
+            <p style={{ margin: '12px 0 0', fontSize: 14, color: MUTED, lineHeight: 1.5 }}>
+              {demand.description}
+            </p>
           )}
-
         </div>
 
-        {/* Footer */}
+        {/* ── Meta ── */}
         <div style={{
           padding: '16px 28px',
-          borderTop: `1px solid ${C.border}`,
-          display: 'flex', justifyContent: 'flex-end',
+          borderBottom: `1px solid ${BORDER}`,
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16,
         }}>
+          <MetaField label="Solicitante">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Avatar name={demand.requestedBy.name} size={22} />
+              <span style={{ fontSize: 13, fontWeight: 500 }}>{demand.requestedBy.name}</span>
+            </div>
+          </MetaField>
+          <MetaField label="Responsável">
+            {demand.assignedTo ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Avatar name={demand.assignedTo.name} size={22} />
+                <span style={{ fontSize: 13, fontWeight: 500 }}>{demand.assignedTo.name}</span>
+              </div>
+            ) : (
+              <span style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>ninguém ainda</span>
+            )}
+          </MetaField>
+          <MetaField label="Prazo">
+            {demand.dueDate
+              ? <DueDate date={demand.dueDate} />
+              : <span style={{ fontSize: 13, color: MUTED }}>—</span>
+            }
+          </MetaField>
+        </div>
+
+        {/* ── IA ── */}
+        <div style={{
+          padding: '14px 28px',
+          borderBottom: `1px solid ${BORDER}`,
+          background: 'oklch(0.97 0.02 280)',
+          display: 'flex', alignItems: 'center', gap: 12,
+        }}>
+          <span style={{ color: 'oklch(0.55 0.20 280)', fontSize: 14, lineHeight: 1 }}>✦</span>
+          {!aiResult && !aiThinking && (
+            <>
+              <span style={{ fontSize: 13, color: 'oklch(0.30 0.10 280)', flex: 1 }}>
+                Quer um resumo do que rolou nessa demanda?
+              </span>
+              <button
+                onClick={summarize}
+                style={{
+                  border: '1px solid oklch(0.55 0.12 280)',
+                  background: 'transparent',
+                  color: 'oklch(0.30 0.10 280)',
+                  padding: '5px 12px', borderRadius: 4,
+                  fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                Resumir com IA
+              </button>
+            </>
+          )}
+          {aiThinking && (
+            <span style={{ fontSize: 13, color: 'oklch(0.30 0.10 280)', fontStyle: 'italic' }}>
+              pensando…
+            </span>
+          )}
+          {aiResult && (
+            <span style={{ fontSize: 13, color: 'oklch(0.25 0.10 280)', lineHeight: 1.5 }}>
+              {aiResult}
+            </span>
+          )}
+        </div>
+
+        {/* ── Timeline ── */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+          <div style={{
+            fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
+            color: MUTED, letterSpacing: 0.5, textTransform: 'uppercase',
+            marginBottom: 16,
+          }}>
+            Histórico
+          </div>
+
+          {timelineEvents.length === 0 ? (
+            <p style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>nenhum evento ainda.</p>
+          ) : (
+            <div style={{ position: 'relative', paddingLeft: 24 }}>
+              {/* Linha vertical */}
+              <div style={{
+                position: 'absolute', left: 9, top: 6, bottom: 6,
+                width: 1, background: BORDER,
+              }} />
+
+              {timelineEvents.map((ev, i) => {
+                if (ev.kind === 'history') {
+                  const h = ev.entry
+                  const toHue = getStageHue(h.toStage.order)
+                  const time = new Date(h.movedAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  return (
+                    <div key={`h-${i}`} style={{ position: 'relative', paddingBottom: 18 }}>
+                      <div style={{
+                        position: 'absolute', left: -19, top: 4,
+                        width: 11, height: 11, borderRadius: '50%',
+                        background: stageColor(toHue, 'solid'),
+                        boxShadow: '0 0 0 3px oklch(1 0 0)',
+                      }} />
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600 }}>{h.movedBy.name}</span>
+                        <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.3 }}>{time}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        {h.fromStage && (
+                          <>
+                            <StageChip name={h.fromStage.name} hue={getStageHue(h.fromStage.order)} size="sm" />
+                            <span style={{ color: MUTED, fontSize: 12 }}>→</span>
+                          </>
+                        )}
+                        <StageChip name={h.toStage.name} hue={toHue} size="sm" />
+                        {h.comment && (
+                          <span style={{ fontSize: 12, color: MUTED, fontStyle: 'italic' }}>"{h.comment}"</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                } else {
+                  const c = ev.entry
+                  const time = new Date(c.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  return (
+                    <div key={`c-${i}`} style={{ position: 'relative', paddingBottom: 18 }}>
+                      <div style={{
+                        position: 'absolute', left: -19, top: 4,
+                        width: 11, height: 11, borderRadius: '50%',
+                        background: 'oklch(0.70 0.01 60)',
+                        boxShadow: '0 0 0 3px oklch(1 0 0)',
+                      }} />
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600 }}>{c.author.name}</span>
+                        <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.3 }}>{time}</span>
+                      </div>
+                      <div style={{ fontSize: 13, lineHeight: 1.5, color: FG }}>{c.content}</div>
+                    </div>
+                  )
+                }
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer: comentar + avançar ── */}
+        <div style={{
+          padding: '12px 16px',
+          borderTop: `1px solid ${BORDER}`,
+          display: 'flex', gap: 8,
+        }}>
+          <form onSubmit={submitComment} style={{ flex: 1, display: 'flex', gap: 8 }}>
+            <input
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              placeholder="Diga algo construtivo…"
+              style={{
+                flex: 1, padding: '8px 12px', borderRadius: 6,
+                border: `1px solid ${BORDER}`,
+                background: 'oklch(0.99 0 0)',
+                color: FG, fontFamily: 'inherit', fontSize: 13,
+                outline: 'none', transition: 'border-color .15s',
+              }}
+              onFocus={e => { e.target.style.borderColor = stageColor(hue, 'solid') }}
+              onBlur={e => { e.target.style.borderColor = BORDER }}
+            />
+            <button
+              type="submit"
+              style={{
+                background: 'transparent', border: `1px solid ${BORDER}`,
+                color: FG, padding: '8px 14px', borderRadius: 6,
+                fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
+              }}
+            >
+              Comentar
+            </button>
+          </form>
+
           {isLast ? (
-            <span style={{ fontSize: 13, color: C.muted, fontFamily: 'JetBrains Mono, monospace' }}>
+            <span style={{ fontSize: 13, color: MUTED, fontFamily: 'JetBrains Mono, monospace', alignSelf: 'center', whiteSpace: 'nowrap' }}>
               Etapa final
             </span>
           ) : (
             <button
               onClick={() => onAdvance(demand.id)}
               style={{
-                background: C.accent,
-                color: '#fff',
-                border: 'none', borderRadius: 6,
-                padding: '10px 20px',
-                fontSize: 14, fontWeight: 600,
-                cursor: 'pointer',
+                background: stageColor(hue, 'solid'),
+                color: '#fff', border: 'none',
+                padding: '8px 16px', borderRadius: 6,
+                fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
                 display: 'flex', alignItems: 'center', gap: 6,
+                whiteSpace: 'nowrap',
               }}
             >
-              Avançar para {nextStage.name} →
+              Avançar →
             </button>
           )}
         </div>
       </div>
-
-      <style>{`@keyframes slideIn { from { transform: translateX(100%) } to { transform: translateX(0) } }`}</style>
     </div>
   )
 }
 
 function MetaField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <span style={{
+    <div>
+      <div style={{
         fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
-        color: 'oklch(0.55 0.01 60)', textTransform: 'uppercase', letterSpacing: 0.6,
+        color: MUTED, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6,
       }}>
         {label}
-      </span>
-      {children}
-    </div>
-  )
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
-      color: 'oklch(0.55 0.01 60)', textTransform: 'uppercase', letterSpacing: 0.6,
-      marginBottom: 8,
-    }}>
+      </div>
       {children}
     </div>
   )
