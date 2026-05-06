@@ -40,7 +40,7 @@ function handleError(res: Response, err: unknown): void {
   }
 }
 
-export async function list(req: Request, res: Response): Promise<void> {
+export async function list(_req: Request, res: Response): Promise<void> {
   try {
     const flows = await listFlows()
     res.status(200).json(flows)
@@ -52,7 +52,7 @@ export async function list(req: Request, res: Response): Promise<void> {
 export async function create(req: Request, res: Response): Promise<void> {
   const result = createFlowSchema.safeParse(req.body)
   if (!result.success) {
-    res.status(400).json({ error: result.error.flatten().fieldErrors })
+    res.status(400).json({ error: result.error.issues })
     return
   }
   try {
@@ -65,7 +65,7 @@ export async function create(req: Request, res: Response): Promise<void> {
 
 export async function getById(req: Request, res: Response): Promise<void> {
   try {
-    const flow = await getFlowById(req.params.id)
+    const flow = await getFlowById(String(req.params.id))
     res.status(200).json(flow)
   } catch (err) {
     handleError(res, err)
@@ -75,11 +75,11 @@ export async function getById(req: Request, res: Response): Promise<void> {
 export async function update(req: Request, res: Response): Promise<void> {
   const result = updateFlowSchema.safeParse(req.body)
   if (!result.success) {
-    res.status(400).json({ error: result.error.flatten().fieldErrors })
+    res.status(400).json({ error: result.error.issues })
     return
   }
   try {
-    const flow = await updateFlow(req.params.id, req.user.id, result.data)
+    const flow = await updateFlow(String(req.params.id), req.user.id, result.data)
     res.status(200).json(flow)
   } catch (err) {
     handleError(res, err)
@@ -88,7 +88,7 @@ export async function update(req: Request, res: Response): Promise<void> {
 
 export async function remove(req: Request, res: Response): Promise<void> {
   try {
-    await deleteFlow(req.params.id, req.user.id)
+    await deleteFlow(String(req.params.id), req.user.id)
     res.status(204).send()
   } catch (err) {
     handleError(res, err)
@@ -98,11 +98,11 @@ export async function remove(req: Request, res: Response): Promise<void> {
 export async function addStage(req: Request, res: Response): Promise<void> {
   const result = createStageSchema.safeParse(req.body)
   if (!result.success) {
-    res.status(400).json({ error: result.error.flatten().fieldErrors })
+    res.status(400).json({ error: result.error.issues })
     return
   }
   try {
-    const stage = await createStage(req.params.flowId, req.user.id, result.data)
+    const stage = await createStage(String(req.params.flowId), req.user.id, result.data)
     res.status(201).json(stage)
   } catch (err) {
     handleError(res, err)
@@ -112,11 +112,11 @@ export async function addStage(req: Request, res: Response): Promise<void> {
 export async function editStage(req: Request, res: Response): Promise<void> {
   const result = updateStageSchema.safeParse(req.body)
   if (!result.success) {
-    res.status(400).json({ error: result.error.flatten().fieldErrors })
+    res.status(400).json({ error: result.error.issues })
     return
   }
   try {
-    const stage = await updateStage(req.params.stageId, req.user.id, result.data)
+    const stage = await updateStage(String(req.params.stageId), req.user.id, result.data)
     res.status(200).json(stage)
   } catch (err) {
     handleError(res, err)
@@ -125,7 +125,7 @@ export async function editStage(req: Request, res: Response): Promise<void> {
 
 export async function removeStage(req: Request, res: Response): Promise<void> {
   try {
-    await deleteStage(req.params.stageId, req.user.id)
+    await deleteStage(String(req.params.stageId), req.user.id)
     res.status(204).send()
   } catch (err) {
     handleError(res, err)

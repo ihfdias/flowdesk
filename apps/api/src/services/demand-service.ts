@@ -47,11 +47,12 @@ export async function createDemand({ title, description, flowId, requestedById, 
   return demand
 }
 
-export async function listDemands() {
+export async function listDemands(flowId?: string) {
   return prisma.demand.findMany({
+    where: flowId ? { flowId } : undefined,
     include: {
       flow: { select: { id: true, name: true } },
-      currentStage: { select: { id: true, name: true, color: true } },
+      currentStage: { select: { id: true, name: true, color: true, order: true, flowId: true } },
       requestedBy: { select: { id: true, name: true } },
       assignedTo: { select: { id: true, name: true } }
     },
@@ -69,8 +70,8 @@ export async function getDemandById(id: string) {
       assignedTo: { select: { id: true, name: true, email: true } },
       history: {
         include: {
-          fromStage: { select: { id: true, name: true } },
-          toStage: { select: { id: true, name: true } },
+          fromStage: { select: { id: true, name: true, color: true, order: true, flowId: true } },
+          toStage: { select: { id: true, name: true, color: true, order: true, flowId: true } },
           movedBy: { select: { id: true, name: true } }
         },
         orderBy: { movedAt: 'asc' }
@@ -125,6 +126,18 @@ export async function advanceDemand(demandId: string, movedById: string, comment
   ])
 
   return updated
+}
+
+export async function createComment(demandId: string, content: string, authorId: string) {
+  const demand = await prisma.demand.findUnique({ where: { id: demandId }, select: { currentStageId: true } })
+  if (!demand) throw new Error('Demanda não encontrada')
+  return prisma.comment.create({
+    data: { demandId, content, authorId, stageId: demand.currentStageId },
+    include: {
+      author: { select: { id: true, name: true } },
+      stage: { select: { id: true, name: true, color: true, order: true, flowId: true } }
+    }
+  })
 }
 
 export async function moveDemand({ demandId, toStageId, movedById, comment }: MoveDemandInput) {
