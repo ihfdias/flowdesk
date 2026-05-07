@@ -41,7 +41,7 @@ function handleError(res: Response, err: unknown): void {
 export async function list(req: Request, res: Response): Promise<void> {
   try {
     const flowId = typeof req.query.flowId === 'string' ? req.query.flowId : undefined
-    const demands = await listDemands(flowId)
+    const demands = await listDemands(req.user.id, flowId)
     res.status(200).json(demands)
   } catch (err) {
     handleError(res, err)

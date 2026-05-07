@@ -47,9 +47,12 @@ export async function createDemand({ title, description, flowId, requestedById, 
   return demand
 }
 
-export async function listDemands(flowId?: string) {
+export async function listDemands(userId: string, flowId?: string) {
   return prisma.demand.findMany({
-    where: flowId ? { flowId } : undefined,
+    where: {
+      flow: { createdById: userId },
+      ...(flowId ? { flowId } : {}),
+    },
     include: {
       flow: { select: { id: true, name: true } },
       currentStage: { select: { id: true, name: true, color: true, order: true, flowId: true } },

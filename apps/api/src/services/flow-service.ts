@@ -8,8 +8,9 @@ export async function createFlow(name: string, description: string | undefined, 
   return flow
 }
 
-export async function listFlows() {
+export async function listFlows(userId: string) {
   const flows = await prisma.flow.findMany({
+    where: { createdById: userId },
     include: { stages: { orderBy: { order: 'asc' } } },
     orderBy: { createdAt: 'desc' }
   })

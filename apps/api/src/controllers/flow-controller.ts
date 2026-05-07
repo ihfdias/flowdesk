@@ -40,9 +40,9 @@ function handleError(res: Response, err: unknown): void {
   }
 }
 
-export async function list(_req: Request, res: Response): Promise<void> {
+export async function list(req: Request, res: Response): Promise<void> {
   try {
-    const flows = await listFlows()
+    const flows = await listFlows(req.user.id)
     res.status(200).json(flows)
   } catch (err) {
     handleError(res, err)
