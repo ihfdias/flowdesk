@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../lib/api'
 import { Demand, Flow, HistoryEntry, Comment } from '../../lib/types'
-import { getStageHue, stageColor } from '../../lib/colors'
+import { stageHueFromColor, stageColor } from '../../lib/colors'
 import StageChip from '../primitives/StageChip'
 import Avatar from '../primitives/Avatar'
 import DueDate from '../primitives/DueDate'
@@ -22,7 +22,7 @@ const BORDER = 'oklch(0.90 0.005 60)'
 const FG = 'oklch(0.18 0.01 60)'
 
 export default function DemandModal({ demand, flow, onClose, onAdvance }: Props) {
-  const hue = getStageHue(demand.currentStage.order)
+  const hue = stageHueFromColor(demand.currentStage.color, demand.currentStage.order)
 
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [comments, setComments] = useState<Comment[]>([])
@@ -60,16 +60,17 @@ export default function DemandModal({ demand, flow, onClose, onAdvance }: Props)
     }
   }
 
-  const summarize = () => {
+  const summarize = async () => {
     setAiThinking(true)
     setAiResult(null)
-    setTimeout(() => {
+    try {
+      const res = await api.post(`/api/ai/summarize/${demand.id}`)
+      setAiResult(res.data.summary)
+    } catch {
+      setAiResult('Não foi possível gerar o resumo. Verifique se o Ollama está rodando.')
+    } finally {
       setAiThinking(false)
-      setAiResult(
-        `Demanda em ${demand.currentStage.name}, solicitada por ${demand.requestedBy.name}.` +
-        (demand.assignedTo ? ` ${demand.assignedTo.name} está tocando.` : ' Sem responsável atribuído.')
-      )
-    }, 1400)
+    }
   }
 
   const timelineEvents: TimelineEvent[] = [
@@ -228,7 +229,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance }: Props)
               {timelineEvents.map((ev, i) => {
                 if (ev.kind === 'history') {
                   const h = ev.entry
-                  const toHue = getStageHue(h.toStage.order)
+                  const toHue = stageHueFromColor(h.toStage.color, h.toStage.order)
                   const time = new Date(h.movedAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
                   return (
                     <div key={`h-${i}`} style={{ position: 'relative', paddingBottom: 18 }}>
@@ -245,7 +246,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance }: Props)
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         {h.fromStage && (
                           <>
-                            <StageChip name={h.fromStage.name} hue={getStageHue(h.fromStage.order)} size="sm" />
+                            <StageChip name={h.fromStage.name} hue={stageHueFromColor(h.fromStage.color, h.fromStage.order)} size="sm" />
                             <span style={{ color: MUTED, fontSize: 12 }}>→</span>
                           </>
                         )}

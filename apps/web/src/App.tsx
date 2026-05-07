@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/auth'
 import LoginPage from './pages/LoginPage'
 import BoardPage from './pages/BoardPage'
+import FlowEditorPage from './pages/FlowEditorPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -17,6 +18,14 @@ export default function App() {
         element={
           <PrivateRoute>
             <BoardPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/flows/:id/edit"
+        element={
+          <PrivateRoute>
+            <FlowEditorPage />
           </PrivateRoute>
         }
       />

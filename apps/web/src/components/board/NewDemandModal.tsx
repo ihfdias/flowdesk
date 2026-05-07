@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../../lib/api'
 import { Flow } from '../../lib/types'
 
@@ -19,6 +19,36 @@ export default function NewDemandModal({ flow, onClose, onCreated }: Props) {
   const [dueDate, setDueDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // IA: sugestão de etapas
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [suggestingAI, setSuggestingAI] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    if (description.trim().length < 15) {
+      setSuggestions([])
+      return
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      setSuggestingAI(true)
+      try {
+        const res = await api.post('/api/ai/suggest-stages', { description: description.trim() })
+        setSuggestions(res.data.stages ?? [])
+      } catch {
+        setSuggestions([])
+      } finally {
+        setSuggestingAI(false)
+      }
+    }, 800)
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [description])
 
   const handleSubmit = async (e: { preventDefault(): void }) => {
     e.preventDefault()
@@ -82,8 +112,7 @@ export default function NewDemandModal({ flow, onClose, onCreated }: Props) {
             margin: 0,
             fontFamily: 'Instrument Serif, serif',
             fontSize: 28, fontWeight: 400, fontStyle: 'italic',
-            letterSpacing: -0.6, lineHeight: 1.1,
-            color: FG,
+            letterSpacing: -0.6, lineHeight: 1.1, color: FG,
           }}>
             Nova demanda.
           </h2>
@@ -115,6 +144,47 @@ export default function NewDemandModal({ flow, onClose, onCreated }: Props) {
               onFocus={e => { e.target.style.borderColor = ACCENT }}
               onBlur={e => { e.target.style.borderColor = BORDER }}
             />
+            {/* Sugestão de etapas pela IA */}
+            {(suggestingAI || suggestions.length > 0) && (
+              <div style={{
+                marginTop: 8, padding: '10px 12px',
+                background: 'oklch(0.97 0.02 280)',
+                borderRadius: 6,
+                display: 'flex', flexDirection: 'column', gap: 6,
+              }}>
+                <span style={{
+                  fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
+                  color: 'oklch(0.45 0.15 280)', letterSpacing: 0.5,
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                  <span>✦</span> Etapas sugeridas pela IA
+                </span>
+                {suggestingAI ? (
+                  <span style={{ fontSize: 12, color: 'oklch(0.50 0.10 280)', fontStyle: 'italic' }}>
+                    pensando…
+                  </span>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                    {suggestions.map((s, i) => (
+                      <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        {i > 0 && (
+                          <span style={{ fontSize: 10, color: 'oklch(0.65 0.08 280)' }}>→</span>
+                        )}
+                        <span style={{
+                          fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
+                          color: 'oklch(0.30 0.12 280)',
+                          background: 'oklch(0.93 0.04 280)',
+                          padding: '2px 8px', borderRadius: 4,
+                          letterSpacing: 0.3,
+                        }}>
+                          {s}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </Field>
 
           <Field label="Prazo">

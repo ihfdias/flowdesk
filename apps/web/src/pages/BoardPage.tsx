@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { Flow, Demand, User } from '../lib/types'
-import { getStageHue, stageColor } from '../lib/colors'
+import { stageHueFromColor, stageColor } from '../lib/colors'
 import DemandCard from '../components/board/DemandCard'
 import DemandModal from '../components/board/DemandModal'
 import NewDemandModal from '../components/board/NewDemandModal'
@@ -35,6 +36,7 @@ const C = {
 
 export default function BoardPage() {
   const { logout } = useAuth()
+  const navigate = useNavigate()
   const [flows, setFlows] = useState<Flow[]>([])
   const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null)
   const [demands, setDemands] = useState<Demand[]>([])
@@ -170,7 +172,7 @@ export default function BoardPage() {
 
         {/* Editar fluxo */}
         <button
-          onClick={() => showToast('Em breve — editor de fluxo chegando.')}
+          onClick={() => selectedFlow && navigate(`/flows/${selectedFlow.id}/edit`)}
           style={{
             background: 'transparent', color: C.fg,
             border: `1px solid ${C.border}`, padding: '7px 12px', borderRadius: 6,
@@ -236,7 +238,7 @@ export default function BoardPage() {
         alignItems: 'start',
       }}>
         {selectedFlow?.stages.map(stage => {
-          const hue = getStageHue(stage.order)
+          const hue = stageHueFromColor(stage.color, stage.order)
           const glyph = getGlyph(stage.order)
           const stageDemands = demands.filter(d => d.currentStageId === stage.id)
           const isOver = dragOverStage === stage.id

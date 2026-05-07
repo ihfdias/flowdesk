@@ -1,5 +1,5 @@
 import { Demand } from '../../lib/types'
-import { getStageHue, stageColor } from '../../lib/colors'
+import { stageHueFromColor, stageColor } from '../../lib/colors'
 import Avatar from '../primitives/Avatar'
 import PriorityDot from '../primitives/PriorityDot'
 import DueDate from '../primitives/DueDate'
@@ -20,7 +20,7 @@ const C = {
 }
 
 export default function DemandCard({ demand, isDragging, onDragStart, onDragEnd, onClick }: Props) {
-  const hue = getStageHue(demand.currentStage.order)
+  const hue = stageHueFromColor(demand.currentStage.color, demand.currentStage.order)
 
   return (
     <div
