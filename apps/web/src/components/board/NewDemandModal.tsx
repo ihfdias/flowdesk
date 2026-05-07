@@ -63,6 +63,8 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
       await api.post('/api/demands', {
         title: title.trim(),
         description: description.trim() || undefined,
+        tag,
+        priority,
         flowId: flow.id,
         dueDate: dueDate || undefined,
         assignedToId: assignedToId || undefined,

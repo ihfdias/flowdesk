@@ -60,6 +60,8 @@ model Demand {
   id             String    @id @default(uuid())
   title          String
   description    String?
+  tag            String?
+  priority       String?
   flowId         String
   currentStageId String
   requestedById  String

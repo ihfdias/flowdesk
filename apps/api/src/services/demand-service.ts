@@ -3,6 +3,8 @@ import prisma from '../prisma/client'
 interface CreateDemandInput {
   title: string
   description?: string
+  tag?: string
+  priority?: string
   flowId: string
   requestedById: string
   assignedToId?: string
@@ -16,7 +18,7 @@ interface MoveDemandInput {
   comment?: string
 }
 
-export async function createDemand({ title, description, flowId, requestedById, assignedToId, dueDate }: CreateDemandInput) {
+export async function createDemand({ title, description, tag, priority, flowId, requestedById, assignedToId, dueDate }: CreateDemandInput) {
   const flow = await prisma.flow.findUnique({
     where: { id: flowId },
     include: { stages: { orderBy: { order: 'asc' } } }
@@ -31,7 +33,7 @@ export async function createDemand({ title, description, flowId, requestedById, 
   const firstStage = flow.stages[0]
 
   const demand = await prisma.demand.create({
-    data: { title, description, flowId, currentStageId: firstStage.id, requestedById, assignedToId, dueDate },
+    data: { title, description, tag, priority, flowId, currentStageId: firstStage.id, requestedById, assignedToId, dueDate },
     include: {
       flow: true,
       currentStage: true,

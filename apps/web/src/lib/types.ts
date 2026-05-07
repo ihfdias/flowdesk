@@ -16,6 +16,8 @@ export interface Demand {
   id: string
   title: string
   description?: string
+  tag?: string
+  priority?: string
   flowId: string
   currentStageId: string
   currentStage: Stage

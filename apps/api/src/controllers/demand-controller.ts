@@ -5,6 +5,8 @@ import { createDemand, listDemands, getDemandById, advanceDemand, moveDemand, cr
 const createDemandSchema = z.object({
   title: z.string().min(2),
   description: z.string().optional(),
+  tag: z.string().optional(),
+  priority: z.enum(['baixa', 'média', 'alta']).optional(),
   flowId: z.string(),
   assignedToId: z.string().optional(),
   dueDate: z.coerce.date().optional()

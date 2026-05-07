@@ -49,8 +49,8 @@ export default function DemandCard({ demand, isDragging, onDragStart, onDragEnd,
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <PriorityDot />
-        {demand.description && <TagPill tag={demand.description.split(' ')[0]} />}
+        <PriorityDot priority={demand.priority as 'alta' | 'média' | 'baixa' | undefined} />
+        {demand.tag && <TagPill tag={demand.tag} />}
         <div style={{ flex: 1 }} />
         <DueDate date={demand.dueDate} />
       </div>

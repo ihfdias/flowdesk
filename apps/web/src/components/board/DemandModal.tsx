@@ -109,7 +109,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance }: Props)
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <StageChip name={demand.currentStage.name} hue={hue} size="sm" />
             <span style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.4 }}>
-              #{demand.id.slice(0, 8).toUpperCase()}
+              #{demand.id.slice(0, 8).toUpperCase()}{demand.tag ? ` · ${demand.tag.toUpperCase()}` : ''}
             </span>
             <div style={{ flex: 1 }} />
             <button
