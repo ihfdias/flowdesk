@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../../lib/api'
-import { Flow } from '../../lib/types'
+import { Flow, User } from '../../lib/types'
 
 interface Props {
   flow: Flow
+  members?: User[]
   onClose: () => void
   onCreated: () => void
 }
@@ -13,9 +14,12 @@ const FG = 'oklch(0.18 0.01 60)'
 const MUTED = 'oklch(0.50 0.01 60)'
 const ACCENT = 'oklch(0.62 0.20 28)'
 
-export default function NewDemandModal({ flow, onClose, onCreated }: Props) {
+export default function NewDemandModal({ flow, members = [], onClose, onCreated }: Props) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [tag, setTag] = useState('vídeo')
+  const [priority, setPriority] = useState('média')
+  const [assignedToId, setAssignedToId] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -61,6 +65,7 @@ export default function NewDemandModal({ flow, onClose, onCreated }: Props) {
         description: description.trim() || undefined,
         flowId: flow.id,
         dueDate: dueDate || undefined,
+        assignedToId: assignedToId || undefined,
       })
       onCreated()
     } catch {
@@ -82,7 +87,7 @@ export default function NewDemandModal({ flow, onClose, onCreated }: Props) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: 480,
+          width: 720, maxHeight: 'calc(100vh - 80px)',
           background: 'oklch(1 0 0)',
           borderRadius: 12,
           boxShadow: '0 24px 80px rgba(0,0,0,.16)',
@@ -114,7 +119,7 @@ export default function NewDemandModal({ flow, onClose, onCreated }: Props) {
             fontSize: 28, fontWeight: 400, fontStyle: 'italic',
             letterSpacing: -0.6, lineHeight: 1.1, color: FG,
           }}>
-            Nova demanda.
+            O que precisa rolar?
           </h2>
         </div>
 
@@ -187,16 +192,75 @@ export default function NewDemandModal({ flow, onClose, onCreated }: Props) {
             )}
           </Field>
 
-          <Field label="Prazo">
-            <input
-              type="date"
-              value={dueDate}
-              onChange={e => setDueDate(e.target.value)}
-              style={{ ...inputStyle, colorScheme: 'light' }}
-              onFocus={e => { e.target.style.borderColor = ACCENT }}
-              onBlur={e => { e.target.style.borderColor = BORDER }}
-            />
-          </Field>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <Field label="Tipo">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {(['vídeo', 'social', 'editorial', 'web', 'PR'] as const).map(t => (
+                  <button key={t} type="button" onClick={() => setTag(t)} style={{
+                    padding: '5px 10px', borderRadius: 4, fontSize: 12,
+                    border: `1px solid ${tag === t ? ACCENT : BORDER}`,
+                    background: tag === t ? 'oklch(0.97 0.04 28)' : 'transparent',
+                    color: tag === t ? 'oklch(0.40 0.16 28)' : FG,
+                    cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace',
+                    fontWeight: tag === t ? 700 : 500, letterSpacing: 0.3,
+                  }}>{t}</button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Prioridade">
+              <div style={{ display: 'flex', gap: 4 }}>
+                {(['baixa', 'média', 'alta'] as const).map((p, i) => {
+                  const colors = ['oklch(0.72 0.04 240)', 'oklch(0.72 0.14 75)', 'oklch(0.62 0.18 28)']
+                  const c = colors[i]
+                  return (
+                    <button key={p} type="button" onClick={() => setPriority(p)} style={{
+                      padding: '5px 0', borderRadius: 4, fontSize: 12,
+                      border: `1px solid ${priority === p ? c : BORDER}`,
+                      background: priority === p ? c : 'transparent',
+                      color: priority === p ? '#fff' : FG,
+                      cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+                      flex: 1, textAlign: 'center', textTransform: 'capitalize',
+                    }}>{p}</button>
+                  )
+                })}
+              </div>
+            </Field>
+          </div>
+
+          {members.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <Field label="Responsável">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {members.map(m => (
+                    <button key={m.id} type="button" onClick={() => setAssignedToId(m.id)}
+                      title={m.name}
+                      style={{
+                        padding: 2, borderRadius: '50%', background: 'transparent',
+                        border: `2px solid ${assignedToId === m.id ? ACCENT : 'transparent'}`,
+                        cursor: 'pointer',
+                      }}>
+                      <MemberAvatar name={m.name} selected={assignedToId === m.id} />
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Prazo">
+                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                  style={{ ...inputStyle, colorScheme: 'light' }}
+                  onFocus={e => { e.target.style.borderColor = ACCENT }}
+                  onBlur={e => { e.target.style.borderColor = BORDER }}
+                />
+              </Field>
+            </div>
+          ) : (
+            <Field label="Prazo">
+              <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                style={{ ...inputStyle, colorScheme: 'light' }}
+                onFocus={e => { e.target.style.borderColor = ACCENT }}
+                onBlur={e => { e.target.style.borderColor = BORDER }}
+              />
+            </Field>
+          )}
 
           {error && (
             <p style={{ margin: 0, fontSize: 12, color: 'oklch(0.55 0.18 28)', fontFamily: 'JetBrains Mono, monospace' }}>
@@ -248,6 +312,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       </label>
       {children}
     </div>
+  )
+}
+
+function MemberAvatar({ name, selected }: { name: string; selected: boolean }) {
+  const initials = name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+  return (
+    <div style={{
+      width: 28, height: 28, borderRadius: '50%',
+      background: selected ? ACCENT : 'oklch(0.88 0.01 60)',
+      color: selected ? '#fff' : FG,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 10, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+    }}>{initials}</div>
   )
 }
 

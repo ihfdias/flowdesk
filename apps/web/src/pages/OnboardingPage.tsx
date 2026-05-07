@@ -1,7 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../lib/api'
-import { useAuth } from '../lib/auth'
 import { COLOR_OPTIONS, stageColor, stageHueFromColor } from '../lib/colors'
 
 type Step = 1 | 2 | 3
@@ -25,12 +24,32 @@ const FG     = 'oklch(0.18 0.01 60)'
 const MUTED  = 'oklch(0.50 0.01 60)'
 const BORDER = 'oklch(0.90 0.005 60)'
 const WHITE  = 'oklch(1 0 0)'
+const ACCENT = 'oklch(0.62 0.20 28)'
+
+const STEP_META = [
+  {
+    tag:   'passo um',
+    title: 'Quem é o\ntime?',
+    sub:   'Convide quem vai abrir, executar e aprovar demandas.',
+  },
+  {
+    tag:   'passo dois',
+    title: 'Seu primeiro\nfluxo.',
+    sub:   'Escolha um nome e as etapas. Você pode editar tudo depois.',
+  },
+  {
+    tag:   'último passo',
+    title: 'Tudo\npronto.',
+    sub:   'Seu fluxo está no ar. Hora de abrir a primeira demanda de verdade.',
+  },
+]
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
-  const { user } = useAuth()
 
   const [step, setStep]         = useState<Step>(1)
+  const [teamName, setTeamName] = useState('')
+  const [invites, setInvites]   = useState(['', '', ''])
   const [flowName, setFlowName] = useState('Marketing Digital')
   const [stages, setStages]     = useState<StageEntry[]>(DEFAULT_STAGES)
   const [loading, setLoading]   = useState(false)
@@ -78,7 +97,6 @@ export default function OnboardingPage() {
     navigate('/board')
   }
 
-  const firstName  = user?.name?.split(' ')[0] ?? 'você'
   const validCount = stages.filter(s => s.name.trim()).length
   const canNext    = step !== 2 || (!!flowName.trim() && validCount > 0)
   const isDisabled = loading || !canNext
@@ -92,12 +110,14 @@ export default function OnboardingPage() {
                      : step === 3    ? 'Abrir o board →'
                      : 'Continuar →'
 
+  const meta = STEP_META[step - 1]
+
   return (
     <div style={{
-      minHeight: '100vh', background: BG,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      width: '100%', height: '100vh', background: BG,
+      display: 'grid', gridTemplateColumns: '1fr 1.2fr',
       fontFamily: 'Inter, system-ui, sans-serif', color: FG,
-      padding: 24,
+      overflow: 'hidden',
     }}>
       <style>{`
         @keyframes stepIn {
@@ -106,20 +126,82 @@ export default function OnboardingPage() {
         }
       `}</style>
 
+      {/* Painel esquerdo — narrativa */}
       <div style={{
-        width: '100%', maxWidth: 480,
-        background: WHITE,
-        borderRadius: 16,
-        boxShadow: '0 2px 48px rgba(0,0,0,.09)',
-        overflow: 'hidden',
+        padding: '40px 48px',
+        background: 'oklch(0.97 0.005 80)',
+        borderRight: `1px solid ${BORDER}`,
+        display: 'flex', flexDirection: 'column',
       }}>
+        {/* Logo */}
+        <div style={{
+          fontFamily: 'Instrument Serif, Georgia, serif',
+          fontSize: 24, fontWeight: 400, fontStyle: 'italic',
+          letterSpacing: -0.4,
+        }}>
+          FlowDesk<span style={{ color: ACCENT }}>.</span>
+        </div>
 
-        {/* Conteúdo do passo — animado ao trocar */}
+        {/* Narrativa central */}
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+          <div>
+            <div style={{
+              fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
+              color: MUTED, letterSpacing: 0.6, textTransform: 'uppercase',
+              marginBottom: 14,
+            }}>
+              {meta.tag}
+            </div>
+            <h1 style={{
+              margin: 0,
+              fontFamily: 'Instrument Serif, Georgia, serif',
+              fontSize: 56, fontWeight: 400, letterSpacing: -1.6,
+              lineHeight: 1, fontStyle: 'italic',
+              whiteSpace: 'pre-line',
+            }}>
+              {meta.title}
+            </h1>
+            <p style={{
+              marginTop: 16, fontSize: 15, lineHeight: 1.55,
+              color: MUTED, maxWidth: 380,
+            }}>
+              {meta.sub}
+            </p>
+          </div>
+        </div>
+
+        {/* Segmentos de progresso */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          {[1, 2, 3].map(i => (
+            <div key={i} style={{
+              flex: 1, height: 3, borderRadius: 2,
+              background: i <= step ? ACCENT : BORDER,
+              transition: 'background .25s',
+            }} />
+          ))}
+        </div>
+        <div style={{
+          fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
+          color: MUTED, letterSpacing: 0.4,
+        }}>
+          {String(step).padStart(2, '0')} / 03
+        </div>
+      </div>
+
+      {/* Painel direito — conteúdo interativo */}
+      <div style={{ padding: '40px 48px', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
         <div
           key={step}
-          style={{ padding: '48px 48px 32px', animation: 'stepIn .3s cubic-bezier(.2,.7,.3,1)' }}
+          style={{ flex: 1, animation: 'stepIn .3s cubic-bezier(.2,.7,.3,1)' }}
         >
-          {step === 1 && <StepWelcome firstName={firstName} />}
+          {step === 1 && (
+            <StepWelcome
+              teamName={teamName}
+              onTeamNameChange={setTeamName}
+              invites={invites}
+              onInvitesChange={setInvites}
+            />
+          )}
           {step === 2 && (
             <StepCreate
               flowName={flowName}
@@ -134,73 +216,120 @@ export default function OnboardingPage() {
           {step === 3 && <StepDone flowName={flowName.trim()} stages={stages} />}
         </div>
 
-        {/* Rodapé: botão + progress */}
-        <div style={{ padding: '0 48px 44px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {/* Navegação */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          marginTop: 24, paddingTop: 20, borderTop: `1px solid ${BORDER}`,
+        }}>
+          <button
+            onClick={() => step > 1 ? setStep((step - 1) as Step) : undefined}
+            disabled={step === 1}
+            style={{
+              background: 'transparent', border: 'none',
+              color: step === 1 ? MUTED : FG,
+              fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
+              cursor: step === 1 ? 'default' : 'pointer',
+              opacity: step === 1 ? 0.4 : 1, padding: '6px 10px',
+            }}
+          >
+            ← voltar
+          </button>
           <button
             onClick={handlePrimary}
             disabled={isDisabled}
             style={{
-              padding: '14px 20px',
-              background: FG, color: WHITE,
-              border: 'none', borderRadius: 8,
-              fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
-              letterSpacing: -0.1,
+              background: isDisabled ? 'oklch(0.65 0.01 60)' : FG,
+              color: WHITE, border: 'none',
+              padding: '10px 20px', borderRadius: 6,
+              fontFamily: 'inherit', fontSize: 13, fontWeight: 600,
               cursor: isDisabled ? 'not-allowed' : 'pointer',
-              opacity: isDisabled ? 0.4 : 1,
-              transition: 'opacity .15s',
+              transition: 'background .15s',
             }}
           >
             {primaryLabel}
           </button>
-
-          {/* Barra de progresso + contador */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{
-              flex: 1, height: 1, background: BORDER,
-              borderRadius: 1, overflow: 'hidden', position: 'relative',
-            }}>
-              <div style={{
-                position: 'absolute', top: 0, left: 0, bottom: 0,
-                width: `${(step / 3) * 100}%`,
-                background: FG,
-                transition: 'width .45s cubic-bezier(.4,0,.2,1)',
-              }} />
-            </div>
-            <span style={{
-              fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
-              color: MUTED, letterSpacing: 0.5, flexShrink: 0,
-            }}>
-              {String(step).padStart(2, '0')} / 03
-            </span>
-          </div>
         </div>
-
       </div>
     </div>
   )
 }
 
-/* ─── Passo 1: Boas-vindas ─── */
+/* ─── Passo 1: Time ─── */
 
-function StepWelcome({ firstName }: { firstName: string }) {
+interface StepWelcomeProps {
+  teamName: string
+  onTeamNameChange: (v: string) => void
+  invites: string[]
+  onInvitesChange: (v: string[]) => void
+}
+
+function StepWelcome({ teamName, onTeamNameChange, invites, onInvitesChange }: StepWelcomeProps) {
+  const placeholders = ['marina@studio.cc', 'teo@studio.cc', 'rafa@studio.cc']
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <StepLabel>Passo 01 — Boas-vindas</StepLabel>
+      <div>
+        <FieldLabel>Convidar por e-mail</FieldLabel>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+          {invites.map((v, i) => (
+            <input
+              key={i}
+              type="email"
+              value={v}
+              placeholder={placeholders[i] ?? 'email@time.cc'}
+              onChange={e => {
+                const next = [...invites]
+                next[i] = e.target.value
+                onInvitesChange(next)
+              }}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '10px 12px', borderRadius: 6,
+                border: `1px solid ${BORDER}`,
+                background: WHITE,
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: 13, color: FG,
+                outline: 'none', transition: 'border-color .15s',
+              }}
+              onFocus={e => { e.target.style.borderColor = ACCENT }}
+              onBlur={e => { e.target.style.borderColor = BORDER }}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={() => onInvitesChange([...invites, ''])}
+            style={{
+              alignSelf: 'flex-start', background: 'transparent', border: 'none',
+              color: MUTED, fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
+              letterSpacing: 0.4, cursor: 'pointer', padding: '4px 0',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = FG }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = MUTED }}
+          >
+            + adicionar mais
+          </button>
+        </div>
+      </div>
 
-      <h1 style={{
-        margin: 0,
-        fontFamily: '"Instrument Serif", Georgia, serif',
-        fontSize: 56, fontWeight: 400, fontStyle: 'italic',
-        letterSpacing: -2.2, lineHeight: 0.95,
+      <div style={{
+        padding: 14,
+        background: 'oklch(0.96 0.005 80)',
+        borderRadius: 6, border: `1px solid ${BORDER}`,
       }}>
-        Olá,<br />
-        <span style={{ color: 'oklch(0.60 0.16 28)' }}>{firstName}.</span>
-      </h1>
-
-      <p style={{ margin: 0, fontSize: 15, lineHeight: 1.65, color: 'oklch(0.42 0.01 60)' }}>
-        Em dois minutos você vai ter seu primeiro fluxo de trabalho montado —
-        com as etapas que fazem sentido pro seu time.
-      </p>
+        <FieldLabel>Nome do time</FieldLabel>
+        <input
+          value={teamName}
+          onChange={e => onTeamNameChange(e.target.value)}
+          placeholder="Ex: Studio Mun · Comunicação"
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            background: 'transparent', border: 'none',
+            padding: '6px 0', marginTop: 6,
+            fontFamily: 'inherit', fontSize: 17, fontWeight: 600,
+            letterSpacing: -0.3, color: FG,
+            outline: 'none',
+          }}
+        />
+      </div>
     </div>
   )
 }

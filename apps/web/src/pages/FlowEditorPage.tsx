@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, Fragment } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../lib/api'
 import { Flow, Stage } from '../lib/types'
 import { COLOR_OPTIONS, stageHueFromColor, stageColor } from '../lib/colors'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
+const STAGE_GLYPHS = ['◐', '✺', '◇', '◈', '●', '◉', '◎']
 
 const FG = 'oklch(0.18 0.01 60)'
 const MUTED = 'oklch(0.50 0.01 60)'
@@ -265,147 +267,184 @@ export default function FlowEditorPage() {
         </div>
 
         {/* Stage rows */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {stages.map((stage, idx) => {
             const hue = stageHueFromColor(stage.color, stage.order)
             const isEditing = editingId === stage.id
             const isConfirmingDelete = confirmDelete === stage.id
             const isOver = overIdx === idx && dragIdx !== idx
             const isDragging = dragIdx === idx
+            const glyph = STAGE_GLYPHS[idx % STAGE_GLYPHS.length]
+            const nextHue = idx < stages.length - 1 ? stageHueFromColor(stages[idx + 1].color, stages[idx + 1].order) : null
 
             return (
-              <div
-                key={stage.id}
-                draggable={!isEditing}
-                onDragStart={e => handleDragStart(e, idx)}
-                onDragOver={e => handleDragOver(e, idx)}
-                onDrop={e => { e.stopPropagation(); handleDrop() }}
-                onDragEnd={() => { setDragIdx(null); setOverIdx(null) }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 14px',
-                  background: isOver ? stageColor(hue, 'softer') : 'oklch(1 0 0)',
-                  border: `1px solid ${isOver ? stageColor(hue, 'ring') : BORDER}`,
-                  borderLeft: `3px solid ${stageColor(hue, 'solid')}`,
-                  borderRadius: 6,
-                  opacity: isDragging ? 0.35 : 1,
-                  cursor: isEditing ? 'default' : 'grab',
-                  transition: 'background .12s, border-color .12s, opacity .12s',
-                }}
-              >
-                {/* Drag handle */}
-                <span style={{ color: MUTED, fontSize: 14, lineHeight: 1, flexShrink: 0, userSelect: 'none' }}>
-                  ⠿
-                </span>
-
-                {/* Color swatches */}
+              <Fragment key={stage.id}>
                 <div
-                  style={{ display: 'flex', gap: 4, flexShrink: 0 }}
-                  onClick={e => e.stopPropagation()}
+                  draggable={!isEditing}
+                  onDragStart={e => handleDragStart(e, idx)}
+                  onDragOver={e => handleDragOver(e, idx)}
+                  onDrop={e => { e.stopPropagation(); handleDrop() }}
+                  onDragEnd={() => { setDragIdx(null); setOverIdx(null) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 14px',
+                    background: isOver ? stageColor(hue, 'softer') : 'oklch(1 0 0)',
+                    border: `1px solid ${isOver ? stageColor(hue, 'ring') : BORDER}`,
+                    borderLeft: `4px solid ${stageColor(hue, 'solid')}`,
+                    borderRadius: 6,
+                    opacity: isDragging ? 0.35 : 1,
+                    cursor: isEditing ? 'default' : 'grab',
+                    transition: 'background .12s, border-color .12s, opacity .12s',
+                  }}
                 >
-                  {COLOR_OPTIONS.map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => changeColor(stage.id, opt.value)}
-                      title={opt.value}
-                      style={{
-                        width: 14, height: 14, borderRadius: '50%',
-                        background: stageColor(opt.hue, 'solid'),
-                        border: stage.color === opt.value
-                          ? `2px solid ${stageColor(opt.hue, 'deep')}`
-                          : '2px solid transparent',
-                        boxShadow: stage.color === opt.value
-                          ? `0 0 0 1px ${stageColor(opt.hue, 'deep')}`
-                          : 'none',
-                        cursor: 'pointer', padding: 0, flexShrink: 0,
-                        transition: 'transform .1s',
-                      }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = '' }}
-                    />
-                  ))}
-                </div>
+                  {/* Drag handle */}
+                  <span style={{ color: MUTED, fontSize: 14, lineHeight: 1, flexShrink: 0, userSelect: 'none' }}>
+                    ⠿
+                  </span>
 
-                {/* Name */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {isEditing ? (
-                    <input
-                      autoFocus
-                      value={editingName}
-                      onChange={e => setEditingName(e.target.value)}
-                      onBlur={() => saveStage(stage.id)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter') e.currentTarget.blur()
-                        if (e.key === 'Escape') setEditingId(null)
-                      }}
-                      onClick={e => e.stopPropagation()}
+                  {/* Number */}
+                  <div style={{
+                    fontFamily: 'Instrument Serif, Georgia, serif',
+                    fontSize: 32, fontWeight: 400, fontStyle: 'italic',
+                    color: stageColor(hue, 'solid'), lineHeight: 1,
+                    minWidth: 32, flexShrink: 0,
+                  }}>
+                    {String(idx + 1).padStart(2, '0')}
+                  </div>
+
+                  {/* Glyph circle */}
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%',
+                    background: stageColor(hue, 'soft'),
+                    color: stageColor(hue, 'solid'),
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 16, flexShrink: 0,
+                  }}>{glyph}</div>
+
+                  {/* Name + subtitle */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {isEditing ? (
+                      <input
+                        autoFocus
+                        value={editingName}
+                        onChange={e => setEditingName(e.target.value)}
+                        onBlur={() => saveStage(stage.id)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') e.currentTarget.blur()
+                          if (e.key === 'Escape') setEditingId(null)
+                        }}
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                          width: '100%', border: 'none', outline: 'none',
+                          fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
+                          color: FG, background: 'transparent',
+                          letterSpacing: -0.1, padding: 0,
+                        }}
+                      />
+                    ) : (
+                      <span
+                        onClick={e => { e.stopPropagation(); startEdit(stage) }}
+                        title="Clique para renomear"
+                        style={{
+                          fontSize: 14, fontWeight: 600, letterSpacing: -0.1,
+                          cursor: 'text', display: 'block',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {stage.name}
+                      </span>
+                    )}
+                    <div style={{
+                      fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
+                      color: MUTED, letterSpacing: 0.4, marginTop: 2,
+                    }}>
+                      etapa · nº {String(idx + 1).padStart(2, '0')}
+                    </div>
+                  </div>
+
+                  {/* Color swatches */}
+                  <div
+                    style={{ display: 'flex', gap: 4, flexShrink: 0 }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {COLOR_OPTIONS.map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => changeColor(stage.id, opt.value)}
+                        title={opt.value}
+                        style={{
+                          width: 14, height: 14, borderRadius: '50%',
+                          background: stageColor(opt.hue, 'solid'),
+                          border: stage.color === opt.value
+                            ? `2px solid ${stageColor(opt.hue, 'deep')}`
+                            : '2px solid transparent',
+                          boxShadow: stage.color === opt.value
+                            ? `0 0 0 1px ${stageColor(opt.hue, 'deep')}`
+                            : 'none',
+                          cursor: 'pointer', padding: 0, flexShrink: 0,
+                          transition: 'transform .1s',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.25)' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = '' }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Delete */}
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {deleteError === stage.id && (
+                      <span style={{
+                        fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
+                        color: 'oklch(0.55 0.18 28)',
+                      }}>
+                        tem demandas
+                      </span>
+                    )}
+                    <button
+                      onClick={() => handleDelete(stage.id)}
                       style={{
-                        width: '100%', border: 'none', outline: 'none',
-                        fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
-                        color: FG, background: 'transparent',
-                        letterSpacing: -0.1, padding: 0,
+                        background: isConfirmingDelete ? 'oklch(0.95 0.06 28)' : 'transparent',
+                        border: isConfirmingDelete
+                          ? '1px solid oklch(0.78 0.10 28)'
+                          : '1px solid transparent',
+                        color: isConfirmingDelete ? 'oklch(0.45 0.16 28)' : MUTED,
+                        borderRadius: 4,
+                        padding: isConfirmingDelete ? '3px 8px' : '2px 6px',
+                        fontSize: isConfirmingDelete ? 11 : 18,
+                        fontFamily: isConfirmingDelete ? 'JetBrains Mono, monospace' : 'inherit',
+                        cursor: 'pointer', lineHeight: 1,
+                        transition: 'all .15s',
                       }}
-                    />
-                  ) : (
-                    <span
-                      onClick={e => { e.stopPropagation(); startEdit(stage) }}
-                      title="Clique para renomear"
-                      style={{
-                        fontSize: 14, fontWeight: 600, letterSpacing: -0.1,
-                        cursor: 'text', display: 'block',
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      onMouseEnter={e => {
+                        if (!isConfirmingDelete) {
+                          e.currentTarget.style.borderColor = BORDER
+                          e.currentTarget.style.color = 'oklch(0.45 0.16 28)'
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!isConfirmingDelete) {
+                          e.currentTarget.style.borderColor = 'transparent'
+                          e.currentTarget.style.color = MUTED
+                        }
                       }}
                     >
-                      {stage.name}
-                    </span>
-                  )}
+                      {isConfirmingDelete ? 'confirmar?' : '×'}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Delete */}
-                <div
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  {deleteError === stage.id && (
-                    <span style={{
-                      fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
-                      color: 'oklch(0.55 0.18 28)',
-                    }}>
-                      tem demandas
-                    </span>
-                  )}
-                  <button
-                    onClick={() => handleDelete(stage.id)}
-                    style={{
-                      background: isConfirmingDelete ? 'oklch(0.95 0.06 28)' : 'transparent',
-                      border: isConfirmingDelete
-                        ? '1px solid oklch(0.78 0.10 28)'
-                        : '1px solid transparent',
-                      color: isConfirmingDelete ? 'oklch(0.45 0.16 28)' : MUTED,
-                      borderRadius: 4,
-                      padding: isConfirmingDelete ? '3px 8px' : '2px 6px',
-                      fontSize: isConfirmingDelete ? 11 : 18,
-                      fontFamily: isConfirmingDelete ? 'JetBrains Mono, monospace' : 'inherit',
-                      cursor: 'pointer', lineHeight: 1,
-                      transition: 'all .15s',
-                    }}
-                    onMouseEnter={e => {
-                      if (!isConfirmingDelete) {
-                        e.currentTarget.style.borderColor = BORDER
-                        e.currentTarget.style.color = 'oklch(0.45 0.16 28)'
-                      }
-                    }}
-                    onMouseLeave={e => {
-                      if (!isConfirmingDelete) {
-                        e.currentTarget.style.borderColor = 'transparent'
-                        e.currentTarget.style.color = MUTED
-                      }
-                    }}
-                  >
-                    {isConfirmingDelete ? 'confirmar?' : '×'}
-                  </button>
-                </div>
-              </div>
+                {/* Connector between stages */}
+                {nextHue !== null && (
+                  <div style={{
+                    marginLeft: 80, height: 14, width: 2,
+                    background: `linear-gradient(180deg, ${stageColor(hue, 'solid')}, ${stageColor(nextHue, 'solid')})`,
+                    opacity: 0.4, borderRadius: 1,
+                  }} />
+                )}
+              </Fragment>
             )
           })}
         </div>

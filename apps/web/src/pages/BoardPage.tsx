@@ -342,6 +342,7 @@ export default function BoardPage() {
       {showNewDemand && selectedFlow && (
         <NewDemandModal
           flow={selectedFlow}
+          members={teamMembers}
           onClose={() => setShowNewDemand(false)}
           onCreated={async () => {
             setShowNewDemand(false)
