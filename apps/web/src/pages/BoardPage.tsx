@@ -50,6 +50,10 @@ export default function BoardPage() {
   useEffect(() => {
     api.get('/api/flows')
       .then(res => {
+        if (res.data.length === 0 && !localStorage.getItem('flowdesk:onboarded')) {
+          navigate('/onboarding')
+          return
+        }
         setFlows(res.data)
         if (res.data.length > 0) setSelectedFlow(res.data[0])
       })

@@ -3,6 +3,7 @@ import { useAuth } from './lib/auth'
 import LoginPage from './pages/LoginPage'
 import BoardPage from './pages/BoardPage'
 import FlowEditorPage from './pages/FlowEditorPage'
+import OnboardingPage from './pages/OnboardingPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -26,6 +27,14 @@ export default function App() {
         element={
           <PrivateRoute>
             <FlowEditorPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/onboarding"
+        element={
+          <PrivateRoute>
+            <OnboardingPage />
           </PrivateRoute>
         }
       />
