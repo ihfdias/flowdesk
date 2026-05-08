@@ -66,7 +66,7 @@ export async function create(req: Request, res: Response): Promise<void> {
 
 export async function getById(req: Request, res: Response): Promise<void> {
   try {
-    const flow = await getFlowById(String(req.params.id))
+    const flow = await getFlowById(String(req.params.id), req.user.id)
     res.status(200).json(flow)
   } catch (err) {
     handleError(res, err)
@@ -98,7 +98,7 @@ export async function remove(req: Request, res: Response): Promise<void> {
 
 export async function getMembersHandler(req: Request, res: Response): Promise<void> {
   try {
-    const members = await listMembers(String(req.params.id))
+    const members = await listMembers(String(req.params.id), req.user.id)
     res.status(200).json(members)
   } catch (err) {
     handleError(res, err)
@@ -114,7 +114,7 @@ export async function addMemberHandler(req: Request, res: Response): Promise<voi
     return
   }
   try {
-    const member = await addMember(String(req.params.id), result.data.email)
+    const member = await addMember(String(req.params.id), result.data.email, req.user.id)
     res.status(201).json(member)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno'
@@ -126,7 +126,7 @@ export async function addMemberHandler(req: Request, res: Response): Promise<voi
 
 export async function removeMemberHandler(req: Request, res: Response): Promise<void> {
   try {
-    await removeMember(String(req.params.id), String(req.params.userId))
+    await removeMember(String(req.params.id), String(req.params.userId), req.user.id)
     res.status(204).send()
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno'

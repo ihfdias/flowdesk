@@ -42,7 +42,7 @@ export async function searchDemandsHandler(req: Request, res: Response): Promise
 
 export async function summarizeDemandHandler(req: Request, res: Response): Promise<void> {
   try {
-    const summary = await summarizeDemand(String(req.params.demandId))
+    const summary = await summarizeDemand(String(req.params.demandId), req.user.id)
     res.status(200).json({ summary })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro interno'

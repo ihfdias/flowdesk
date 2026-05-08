@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, ReactNode } from 'react'
 
 interface User {
   id: string
@@ -17,24 +17,36 @@ interface AuthContextData {
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData)
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 < Date.now()
+  } catch {
+    return true
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(null)
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem('flowdesk:token')
-    const storedUser = localStorage.getItem('flowdesk:user')
-    if (storedToken && storedUser) {
-      setToken(storedToken)
-      setUser(JSON.parse(storedUser))
+  const [token, setToken] = useState<string | null>(() => {
+    const stored = localStorage.getItem('flowdesk:token')
+    if (!stored || isTokenExpired(stored)) {
+      localStorage.removeItem('flowdesk:token')
+      localStorage.removeItem('flowdesk:user')
+      return null
     }
-  }, [])
+    return stored
+  })
 
-  function login(token: string, user: User) {
-    localStorage.setItem('flowdesk:token', token)
-    localStorage.setItem('flowdesk:user', JSON.stringify(user))
-    setToken(token)
-    setUser(user)
+  const [user, setUser] = useState<User | null>(() => {
+    const stored = localStorage.getItem('flowdesk:user')
+    return stored ? (JSON.parse(stored) as User) : null
+  })
+
+  function login(newToken: string, newUser: User) {
+    localStorage.setItem('flowdesk:token', newToken)
+    localStorage.setItem('flowdesk:user', JSON.stringify(newUser))
+    setToken(newToken)
+    setUser(newUser)
   }
 
   function logout() {

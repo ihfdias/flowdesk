@@ -111,8 +111,16 @@ export async function getDemandById(id: string, userId: string) {
 }
 
 export async function advanceDemand(demandId: string, movedById: string, comment?: string) {
-  const demand = await prisma.demand.findUnique({
-    where: { id: demandId },
+  const demand = await prisma.demand.findFirst({
+    where: {
+      id: demandId,
+      flow: {
+        OR: [
+          { createdById: movedById },
+          { members: { some: { userId: movedById } } },
+        ],
+      },
+    },
     include: { flow: { include: { stages: { orderBy: { order: 'asc' } } } } }
   })
   if (!demand) {
@@ -148,7 +156,18 @@ export async function advanceDemand(demandId: string, movedById: string, comment
 }
 
 export async function createComment(demandId: string, content: string, authorId: string) {
-  const demand = await prisma.demand.findUnique({ where: { id: demandId }, select: { currentStageId: true } })
+  const demand = await prisma.demand.findFirst({
+    where: {
+      id: demandId,
+      flow: {
+        OR: [
+          { createdById: authorId },
+          { members: { some: { userId: authorId } } },
+        ],
+      },
+    },
+    select: { currentStageId: true },
+  })
   if (!demand) throw new Error('Demanda não encontrada')
   return prisma.comment.create({
     data: { demandId, content, authorId, stageId: demand.currentStageId },
@@ -176,7 +195,17 @@ export async function archiveDemand(demandId: string, userId: string) {
 }
 
 export async function moveDemand({ demandId, toStageId, movedById, comment }: MoveDemandInput) {
-  const demand = await prisma.demand.findUnique({ where: { id: demandId } })
+  const demand = await prisma.demand.findFirst({
+    where: {
+      id: demandId,
+      flow: {
+        OR: [
+          { createdById: movedById },
+          { members: { some: { userId: movedById } } },
+        ],
+      },
+    },
+  })
   if (!demand) {
     throw new Error('Demanda não encontrada')
   }

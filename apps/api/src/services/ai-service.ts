@@ -5,7 +5,15 @@ const MODEL = 'llama3.2:1b'
 
 export async function searchDemands(query: string, userId: string) {
   const all = await prisma.demand.findMany({
-    where: { flow: { createdById: userId } },
+    where: {
+      archived: false,
+      flow: {
+        OR: [
+          { createdById: userId },
+          { members: { some: { userId } } },
+        ],
+      },
+    },
     include: {
       currentStage: { select: { id: true, name: true, color: true, order: true, flowId: true } },
       requestedBy: { select: { id: true, name: true } },
@@ -83,9 +91,17 @@ Descrição: ${description}`
   }
 }
 
-export async function summarizeDemand(demandId: string): Promise<string> {
-  const demand = await prisma.demand.findUnique({
-    where: { id: demandId },
+export async function summarizeDemand(demandId: string, userId: string): Promise<string> {
+  const demand = await prisma.demand.findFirst({
+    where: {
+      id: demandId,
+      flow: {
+        OR: [
+          { createdById: userId },
+          { members: { some: { userId } } },
+        ],
+      },
+    },
     include: {
       currentStage: { select: { name: true } },
       requestedBy: { select: { name: true } },

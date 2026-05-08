@@ -24,9 +24,15 @@ export async function listFlows(userId: string) {
   })
 }
 
-export async function getFlowById(id: string) {
-  const flow = await prisma.flow.findUnique({
-    where: { id },
+export async function getFlowById(id: string, userId: string) {
+  const flow = await prisma.flow.findFirst({
+    where: {
+      id,
+      OR: [
+        { createdById: userId },
+        { members: { some: { userId } } },
+      ],
+    },
     include: { stages: { orderBy: { order: 'asc' } } }
   })
   if (!flow) {
@@ -65,7 +71,17 @@ export async function deleteFlow(id: string, userId: string) {
   ])
 }
 
-export async function listMembers(flowId: string) {
+export async function listMembers(flowId: string, userId: string) {
+  const flow = await prisma.flow.findFirst({
+    where: {
+      id: flowId,
+      OR: [
+        { createdById: userId },
+        { members: { some: { userId } } },
+      ],
+    },
+  })
+  if (!flow) throw new Error('Fluxo não encontrado')
   return prisma.flowMember.findMany({
     where: { flowId },
     include: { user: { select: { id: true, name: true, email: true } } },
@@ -73,13 +89,14 @@ export async function listMembers(flowId: string) {
   })
 }
 
-export async function addMember(flowId: string, email: string) {
+export async function addMember(flowId: string, email: string, requesterId: string) {
   const [user, flow] = await Promise.all([
     prisma.user.findUnique({ where: { email } }),
-    prisma.flow.findUnique({ where: { id: flowId }, select: { name: true } }),
+    prisma.flow.findUnique({ where: { id: flowId }, select: { name: true, createdById: true } }),
   ])
   if (!user) throw new Error('Usuário não encontrado')
   if (!flow) throw new Error('Fluxo não encontrado')
+  if (flow.createdById !== requesterId) throw new Error('Sem permissão para convidar membros neste fluxo')
 
   const existing = await prisma.flowMember.findUnique({
     where: { flowId_userId: { flowId, userId: user.id } },
@@ -99,7 +116,11 @@ export async function addMember(flowId: string, email: string) {
   return member
 }
 
-export async function removeMember(flowId: string, userId: string) {
+export async function removeMember(flowId: string, userId: string, requesterId: string) {
+  const flow = await prisma.flow.findUnique({ where: { id: flowId }, select: { createdById: true } })
+  if (!flow) throw new Error('Fluxo não encontrado')
+  if (flow.createdById !== requesterId) throw new Error('Sem permissão para remover membros deste fluxo')
+
   const member = await prisma.flowMember.findUnique({
     where: { flowId_userId: { flowId, userId } },
   })
