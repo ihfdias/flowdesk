@@ -66,7 +66,7 @@ export async function create(req: Request, res: Response): Promise<void> {
 
 export async function getById(req: Request, res: Response): Promise<void> {
   try {
-    const demand = await getDemandById(String(req.params.id))
+    const demand = await getDemandById(String(req.params.id), req.user.id)
     res.status(200).json(demand)
   } catch (err) {
     handleError(res, err)

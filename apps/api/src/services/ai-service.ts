@@ -19,40 +19,40 @@ export async function searchDemands(query: string, userId: string) {
   }
 
   const context = all.map((d, i) =>
-    `${i + 1}. ID: ${d.id} | Título: ${d.title} | Etapa: ${d.currentStage.name} | Tag: ${d.tag ?? '—'} | Prioridade: ${d.priority ?? '—'} | Responsável: ${d.assignedTo?.name ?? 'ninguém'} | Prazo: ${d.dueDate ? new Date(d.dueDate).toLocaleDateString('pt-BR') : '—'}`
+    `${i + 1}. Título: ${d.title} | Etapa: ${d.currentStage.name} | Tag: ${d.tag ?? '—'} | Prioridade: ${d.priority ?? '—'} | Responsável: ${d.assignedTo?.name ?? 'ninguém'} | Prazo: ${d.dueDate ? new Date(d.dueDate).toLocaleDateString('pt-BR') : '—'}`
   ).join('\n')
 
-  const prompt = `Você é um assistente de busca de um sistema de gestão de demandas de marketing.
+  const prompt = `Você é um assistente de busca de demandas de marketing.
 
 Pergunta: "${query}"
 
-Demandas disponíveis:
+Demandas:
 ${context}
 
-Identifique quais demandas correspondem à pergunta. Responda APENAS com JSON válido no formato:
-{"summary": "uma frase direta em português sobre o resultado", "ids": ["id-aqui"]}
-
-Se nenhuma demanda corresponder, use ids vazio: []. APENAS o JSON, sem markdown.`
+Retorne JSON: {"indices": [1, 2], "summary": "frase curta em PT-BR sobre o resultado"}
+Coloque em indices apenas os números das demandas relevantes para a pergunta. Se nenhuma, use [].`
 
   try {
-    const raw = await callOllama(prompt)
-    const match = raw.match(/\{[\s\S]*\}/)
-    if (!match) return { summary: 'Não consegui interpretar a resposta da IA.', demands: [] }
-
-    const parsed = JSON.parse(match[0]) as { summary: string; ids: string[] }
-    const ids = Array.isArray(parsed.ids) ? parsed.ids : []
-    const demands = all.filter(d => ids.includes(d.id))
-    return { summary: parsed.summary ?? '', demands }
+    const raw = await callOllama(prompt, { json: true })
+    const parsed = JSON.parse(raw) as { indices?: unknown; summary?: string }
+    const indices = Array.isArray(parsed.indices) ? (parsed.indices as number[]) : []
+    const demands = indices
+      .map(i => all[i - 1])
+      .filter(Boolean)
+    const summary = parsed.summary ?? (demands.length > 0 ? `Encontrei ${demands.length} demanda(s) relevante(s).` : 'Nenhuma demanda correspondente.')
+    return { summary, demands }
   } catch {
     return { summary: 'Erro ao processar. Verifique se o Ollama está rodando.', demands: [] }
   }
 }
 
-async function callOllama(prompt: string): Promise<string> {
+async function callOllama(prompt: string, opts: { json?: boolean } = {}): Promise<string> {
+  const body: Record<string, unknown> = { model: MODEL, prompt, stream: false }
+  if (opts.json) body.format = 'json'
   const res = await fetch(`${OLLAMA_URL}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, prompt, stream: false }),
+    body: JSON.stringify(body),
   })
   if (!res.ok) throw new Error(`Ollama retornou ${res.status}`)
   const data = await res.json() as { response: string }

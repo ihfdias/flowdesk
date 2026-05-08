@@ -2,7 +2,8 @@ import { Request, Response } from 'express'
 import { z } from 'zod'
 import {
   createFlow, listFlows, getFlowById, updateFlow, deleteFlow,
-  createStage, updateStage, deleteStage
+  createStage, updateStage, deleteStage,
+  listMembers, addMember, removeMember,
 } from '../services/flow-service'
 
 const createFlowSchema = z.object({
@@ -92,6 +93,45 @@ export async function remove(req: Request, res: Response): Promise<void> {
     res.status(204).send()
   } catch (err) {
     handleError(res, err)
+  }
+}
+
+export async function getMembersHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const members = await listMembers(String(req.params.id))
+    res.status(200).json(members)
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+const addMemberSchema = z.object({ email: z.string().email() })
+
+export async function addMemberHandler(req: Request, res: Response): Promise<void> {
+  const result = addMemberSchema.safeParse(req.body)
+  if (!result.success) {
+    res.status(400).json({ error: result.error.issues })
+    return
+  }
+  try {
+    const member = await addMember(String(req.params.id), result.data.email)
+    res.status(201).json(member)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro interno'
+    if (message === 'Usuário não encontrado') res.status(404).json({ error: message })
+    else if (message === 'Usuário já é membro deste fluxo') res.status(409).json({ error: message })
+    else res.status(500).json({ error: message })
+  }
+}
+
+export async function removeMemberHandler(req: Request, res: Response): Promise<void> {
+  try {
+    await removeMember(String(req.params.id), String(req.params.userId))
+    res.status(204).send()
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Erro interno'
+    if (message === 'Membro não encontrado neste fluxo') res.status(404).json({ error: message })
+    else res.status(500).json({ error: message })
   }
 }
 

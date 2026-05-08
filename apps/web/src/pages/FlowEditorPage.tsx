@@ -25,6 +25,8 @@ export default function FlowEditorPage() {
   const [editingName, setEditingName] = useState('')
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [confirmDeleteFlow, setConfirmDeleteFlow] = useState(false)
+  const [deletingFlow, setDeletingFlow] = useState(false)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [overIdx, setOverIdx] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -474,6 +476,89 @@ export default function FlowEditorPage() {
           <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
           Adicionar etapa
         </button>
+
+        {/* Danger zone */}
+        <div style={{
+          marginTop: 48,
+          borderTop: `1px solid oklch(0.88 0.04 15)`,
+          paddingTop: 24,
+        }}>
+          <div style={{
+            fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
+            color: 'oklch(0.55 0.22 15)', letterSpacing: 0.5,
+            textTransform: 'uppercase', marginBottom: 12,
+          }}>
+            Zona de perigo
+          </div>
+
+          {!confirmDeleteFlow ? (
+            <button
+              onClick={() => setConfirmDeleteFlow(true)}
+              style={{
+                padding: '8px 16px',
+                background: 'none',
+                border: `1px solid oklch(0.80 0.08 15)`,
+                borderRadius: 6, cursor: 'pointer',
+                fontSize: 13, color: 'oklch(0.55 0.22 15)',
+                fontFamily: 'inherit',
+                transition: 'border-color .15s, background .15s',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'oklch(0.97 0.01 15)'
+                e.currentTarget.style.borderColor = 'oklch(0.55 0.22 15)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'none'
+                e.currentTarget.style.borderColor = 'oklch(0.80 0.08 15)'
+              }}
+            >
+              Deletar fluxo
+            </button>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontSize: 13, color: FG, margin: 0 }}>
+                Tem certeza? <strong>Todas as demandas serão perdidas</strong> e esta ação não pode ser desfeita.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={async () => {
+                    setDeletingFlow(true)
+                    try {
+                      await api.delete(`/api/flows/${id}`)
+                      navigate('/board')
+                    } catch {
+                      setDeletingFlow(false)
+                      setConfirmDeleteFlow(false)
+                    }
+                  }}
+                  disabled={deletingFlow}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'oklch(0.55 0.22 15)',
+                    border: 'none', borderRadius: 6, cursor: deletingFlow ? 'not-allowed' : 'pointer',
+                    fontSize: 13, color: '#fff', fontFamily: 'inherit',
+                    opacity: deletingFlow ? 0.6 : 1,
+                  }}
+                >
+                  {deletingFlow ? 'Deletando…' : 'Confirmar exclusão'}
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteFlow(false)}
+                  disabled={deletingFlow}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'none',
+                    border: `1px solid ${BORDER}`,
+                    borderRadius: 6, cursor: 'pointer',
+                    fontSize: 13, color: MUTED, fontFamily: 'inherit',
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
       </main>
     </div>

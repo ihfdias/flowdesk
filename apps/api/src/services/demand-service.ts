@@ -52,7 +52,12 @@ export async function createDemand({ title, description, tag, priority, flowId, 
 export async function listDemands(userId: string, flowId?: string) {
   return prisma.demand.findMany({
     where: {
-      flow: { createdById: userId },
+      flow: {
+        OR: [
+          { createdById: userId },
+          { members: { some: { userId } } },
+        ],
+      },
       ...(flowId ? { flowId } : {}),
     },
     include: {
@@ -65,9 +70,17 @@ export async function listDemands(userId: string, flowId?: string) {
   })
 }
 
-export async function getDemandById(id: string) {
-  const demand = await prisma.demand.findUnique({
-    where: { id },
+export async function getDemandById(id: string, userId: string) {
+  const demand = await prisma.demand.findFirst({
+    where: {
+      id,
+      flow: {
+        OR: [
+          { createdById: userId },
+          { members: { some: { userId } } },
+        ],
+      },
+    },
     include: {
       flow: { include: { stages: { orderBy: { order: 'asc' } } } },
       currentStage: true,

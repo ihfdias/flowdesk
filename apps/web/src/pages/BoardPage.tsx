@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { Flow, Demand, User } from '../lib/types'
@@ -7,7 +7,10 @@ import { stageHueFromColor, stageColor } from '../lib/colors'
 import DemandCard from '../components/board/DemandCard'
 import DemandModal from '../components/board/DemandModal'
 import NewDemandModal from '../components/board/NewDemandModal'
+import NewFlowModal from '../components/board/NewFlowModal'
+import FlowSettingsModal from '../components/board/FlowSettingsModal'
 import CommandPalette from '../components/CommandPalette'
+import NotificationBell from '../components/NotificationBell'
 
 const STAGE_GLYPHS = ['◐', '✺', '◇', '◈', '●', '◉', '◎']
 const getGlyph = (order: number) => STAGE_GLYPHS[order % STAGE_GLYPHS.length]
@@ -38,6 +41,7 @@ const C = {
 export default function BoardPage() {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [flows, setFlows] = useState<Flow[]>([])
   const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null)
   const [demands, setDemands] = useState<Demand[]>([])
@@ -47,7 +51,10 @@ export default function BoardPage() {
   const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null)
   const [showNewDemand, setShowNewDemand] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [members, setMembers] = useState<User[]>([])
   const [showPalette, setShowPalette] = useState(false)
+  const [showNewFlow, setShowNewFlow] = useState(false)
+  const [showFlowSettings, setShowFlowSettings] = useState(false)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -71,8 +78,19 @@ export default function BoardPage() {
   }, [])
 
   useEffect(() => {
-    if (!selectedFlow) return
+    const flowId = searchParams.get('flowId')
+    if (!flowId || flows.length === 0) return
+    const target = flows.find(f => f.id === flowId)
+    if (target) {
+      setSelectedFlow(target)
+      setSearchParams({})
+    }
+  }, [flows, searchParams])
+
+  useEffect(() => {
+    if (!selectedFlow) { setMembers([]); return }
     api.get(`/api/demands?flowId=${selectedFlow.id}`).then(res => setDemands(res.data))
+    api.get(`/api/flows/${selectedFlow.id}/members`).then(res => setMembers(res.data.map((m: { user: User }) => m.user)))
   }, [selectedFlow])
 
   const reloadDemands = useCallback(async () => {
@@ -117,16 +135,6 @@ export default function BoardPage() {
     }
   }, [reloadDemands, showToast])
 
-  // Unique team members from demand data for header avatars
-  const teamMembers = useMemo<User[]>(() => {
-    const seen = new Set<string>()
-    const members: User[] = []
-    demands.forEach(d => {
-      if (!seen.has(d.requestedBy.id)) { seen.add(d.requestedBy.id); members.push(d.requestedBy) }
-      if (d.assignedTo && !seen.has(d.assignedTo.id)) { seen.add(d.assignedTo.id); members.push(d.assignedTo) }
-    })
-    return members.slice(0, 5)
-  }, [demands])
 
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
@@ -156,33 +164,40 @@ export default function BoardPage() {
 
         <div style={{ flex: 1 }} />
 
-        {/* Flow selector — monospace label + styled select */}
-        {flows.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: C.muted, letterSpacing: 0.4 }}>
-            <span>FLUXO</span>
-            <select
-              value={selectedFlow?.id ?? ''}
-              onChange={e => setSelectedFlow(flows.find(f => f.id === e.target.value) ?? null)}
-              style={{
-                appearance: 'none', border: 'none', background: 'none',
-                fontFamily: 'JetBrains Mono, monospace', fontSize: 12,
-                fontWeight: 700, color: C.fg, cursor: 'pointer',
-                letterSpacing: 0.4, outline: 'none',
-              }}
-            >
-              {flows.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-          </div>
-        )}
+        {/* Flow selector */}
+        <FlowSelector
+          flows={flows}
+          selectedFlow={selectedFlow}
+          onSelect={setSelectedFlow}
+          onNewFlow={() => setShowNewFlow(true)}
+        />
 
-        {/* Team avatars */}
-        {teamMembers.length > 0 && (
-          <div style={{ display: 'flex' }}>
-            {teamMembers.map((member, i) => (
-              <TeamAvatar key={member.id} name={member.name} index={i} />
-            ))}
-          </div>
-        )}
+        {/* Team avatars + settings */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {members.length > 0 && (
+            <div style={{ display: 'flex' }}>
+              {members.slice(0, 5).map((member, i) => (
+                <TeamAvatar key={member.id} name={member.name} index={i} />
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => setShowFlowSettings(true)}
+            title="Configurações do time"
+            style={{
+              background: 'none', border: `1px solid ${C.border}`,
+              borderRadius: 6, padding: '5px 10px',
+              fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
+              color: C.muted, cursor: 'pointer',
+              letterSpacing: 0.4, textTransform: 'uppercase',
+            }}
+          >
+            Time
+          </button>
+        </div>
+
+        {/* Notificações */}
+        <NotificationBell />
 
         {/* ⌘K */}
         <button
@@ -365,11 +380,33 @@ export default function BoardPage() {
       {showNewDemand && selectedFlow && (
         <NewDemandModal
           flow={selectedFlow}
-          members={teamMembers}
+          members={members}
           onClose={() => setShowNewDemand(false)}
           onCreated={async () => {
             setShowNewDemand(false)
             await reloadDemands()
+          }}
+        />
+      )}
+
+      {showFlowSettings && selectedFlow && (
+        <FlowSettingsModal
+          flow={selectedFlow}
+          onClose={() => {
+            setShowFlowSettings(false)
+            api.get(`/api/flows/${selectedFlow.id}/members`)
+              .then(res => setMembers(res.data.map((m: { user: User }) => m.user)))
+          }}
+        />
+      )}
+
+      {showNewFlow && (
+        <NewFlowModal
+          onClose={() => setShowNewFlow(false)}
+          onCreated={flow => {
+            setFlows(prev => [flow, ...prev])
+            setSelectedFlow(flow)
+            setShowNewFlow(false)
           }}
         />
       )}
@@ -395,6 +432,96 @@ export default function BoardPage() {
           animation: 'ndIn .2s ease',
         }}>
           {toast}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FlowSelector({ flows, selectedFlow, onSelect, onNewFlow }: {
+  flows: Flow[]
+  selectedFlow: Flow | null
+  onSelect: (flow: Flow) => void
+  onNewFlow: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontFamily: 'JetBrains Mono, monospace', padding: '4px 8px',
+          borderRadius: 4,
+        }}
+      >
+        <span style={{ fontSize: 10, color: C.muted, letterSpacing: 0.6 }}>FLUXO</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: C.fg, letterSpacing: 0.3, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selectedFlow?.name ?? '—'}
+        </span>
+        <span style={{ fontSize: 9, color: C.muted, marginTop: 1 }}>▾</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 6px)', left: 0,
+          background: 'oklch(1 0 0)',
+          border: `1px solid ${C.border}`,
+          borderRadius: 8,
+          boxShadow: '0 8px 32px rgba(0,0,0,.12)',
+          minWidth: 220, zIndex: 90,
+          overflow: 'hidden',
+        }}>
+          {flows.map(f => (
+            <button
+              key={f.id}
+              onClick={() => { onSelect(f); setOpen(false) }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '9px 14px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                background: f.id === selectedFlow?.id ? 'oklch(0.96 0.005 80)' : 'transparent',
+                fontFamily: 'JetBrains Mono, monospace', fontSize: 12,
+                color: C.fg, letterSpacing: 0.2,
+              }}
+              onMouseEnter={e => { if (f.id !== selectedFlow?.id) e.currentTarget.style.background = 'oklch(0.97 0.003 80)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = f.id === selectedFlow?.id ? 'oklch(0.96 0.005 80)' : 'transparent' }}
+            >
+              <span>{f.name}</span>
+              {f.id === selectedFlow?.id && (
+                <span style={{ fontSize: 11, color: 'oklch(0.62 0.20 28)' }}>✓</span>
+              )}
+            </button>
+          ))}
+
+          <div style={{ borderTop: `1px solid ${C.border}` }}>
+            <button
+              onClick={() => { setOpen(false); onNewFlow() }}
+              style={{
+                width: '100%', padding: '9px 14px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                background: 'transparent',
+                fontFamily: 'JetBrains Mono, monospace', fontSize: 12,
+                color: 'oklch(0.62 0.20 28)', letterSpacing: 0.2,
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'oklch(0.98 0.02 28)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+            >
+              <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
+              <span>Novo fluxo</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
