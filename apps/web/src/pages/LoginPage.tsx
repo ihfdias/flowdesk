@@ -150,7 +150,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="marina@studio.cc"
+                placeholder="seu@email.com"
                 required
                 style={{
                   width: '100%', padding: '11px 14px', borderRadius: 6,
