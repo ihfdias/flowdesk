@@ -3,6 +3,51 @@ import prisma from '../prisma/client'
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434'
 const MODEL = 'llama3.2:1b'
 
+export async function searchDemands(query: string, userId: string) {
+  const all = await prisma.demand.findMany({
+    where: { flow: { createdById: userId } },
+    include: {
+      currentStage: { select: { id: true, name: true, color: true, order: true, flowId: true } },
+      requestedBy: { select: { id: true, name: true } },
+      assignedTo: { select: { id: true, name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+
+  if (all.length === 0) {
+    return { summary: 'Nenhuma demanda encontrada no sistema.', demands: [] }
+  }
+
+  const context = all.map((d, i) =>
+    `${i + 1}. ID: ${d.id} | Título: ${d.title} | Etapa: ${d.currentStage.name} | Tag: ${d.tag ?? '—'} | Prioridade: ${d.priority ?? '—'} | Responsável: ${d.assignedTo?.name ?? 'ninguém'} | Prazo: ${d.dueDate ? new Date(d.dueDate).toLocaleDateString('pt-BR') : '—'}`
+  ).join('\n')
+
+  const prompt = `Você é um assistente de busca de um sistema de gestão de demandas de marketing.
+
+Pergunta: "${query}"
+
+Demandas disponíveis:
+${context}
+
+Identifique quais demandas correspondem à pergunta. Responda APENAS com JSON válido no formato:
+{"summary": "uma frase direta em português sobre o resultado", "ids": ["id-aqui"]}
+
+Se nenhuma demanda corresponder, use ids vazio: []. APENAS o JSON, sem markdown.`
+
+  try {
+    const raw = await callOllama(prompt)
+    const match = raw.match(/\{[\s\S]*\}/)
+    if (!match) return { summary: 'Não consegui interpretar a resposta da IA.', demands: [] }
+
+    const parsed = JSON.parse(match[0]) as { summary: string; ids: string[] }
+    const ids = Array.isArray(parsed.ids) ? parsed.ids : []
+    const demands = all.filter(d => ids.includes(d.id))
+    return { summary: parsed.summary ?? '', demands }
+  } catch {
+    return { summary: 'Erro ao processar. Verifique se o Ollama está rodando.', demands: [] }
+  }
+}
+
 async function callOllama(prompt: string): Promise<string> {
   const res = await fetch(`${OLLAMA_URL}/api/generate`, {
     method: 'POST',

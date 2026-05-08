@@ -7,6 +7,7 @@ import { stageHueFromColor, stageColor } from '../lib/colors'
 import DemandCard from '../components/board/DemandCard'
 import DemandModal from '../components/board/DemandModal'
 import NewDemandModal from '../components/board/NewDemandModal'
+import CommandPalette from '../components/CommandPalette'
 
 const STAGE_GLYPHS = ['◐', '✺', '◇', '◈', '●', '◉', '◎']
 const getGlyph = (order: number) => STAGE_GLYPHS[order % STAGE_GLYPHS.length]
@@ -46,6 +47,15 @@ export default function BoardPage() {
   const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null)
   const [showNewDemand, setShowNewDemand] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [showPalette, setShowPalette] = useState(false)
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'k') { e.preventDefault(); setShowPalette(true) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   useEffect(() => {
     api.get('/api/flows')
@@ -173,6 +183,19 @@ export default function BoardPage() {
             ))}
           </div>
         )}
+
+        {/* ⌘K */}
+        <button
+          onClick={() => setShowPalette(true)}
+          style={{
+            background: 'transparent', border: `1px solid ${C.border}`,
+            color: C.muted, padding: '7px 12px', borderRadius: 6,
+            fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
+            cursor: 'pointer', letterSpacing: 0.4, display: 'flex', alignItems: 'center', gap: 6,
+          }}
+        >
+          <span>⌘K</span>
+        </button>
 
         {/* Editar fluxo */}
         <button
@@ -348,6 +371,16 @@ export default function BoardPage() {
             setShowNewDemand(false)
             await reloadDemands()
           }}
+        />
+      )}
+
+      {showPalette && (
+        <CommandPalette
+          demands={demands}
+          flow={selectedFlow}
+          onClose={() => setShowPalette(false)}
+          onSelectDemand={d => { setSelectedDemand(d); setShowPalette(false) }}
+          onOpenNewDemand={() => setShowNewDemand(true)}
         />
       )}
 
