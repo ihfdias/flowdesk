@@ -27,6 +27,7 @@ export default function FlowEditorPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteFlow, setConfirmDeleteFlow] = useState(false)
   const [deletingFlow, setDeletingFlow] = useState(false)
+  const [deleteFlowError, setDeleteFlowError] = useState<string | null>(null)
   const [dragIdx, setDragIdx] = useState<number | null>(null)
   const [overIdx, setOverIdx] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
@@ -526,9 +527,15 @@ export default function FlowEditorPage() {
                     try {
                       await api.delete(`/api/flows/${id}`)
                       navigate('/board')
-                    } catch {
+                    } catch (err: unknown) {
                       setDeletingFlow(false)
                       setConfirmDeleteFlow(false)
+                      const status = (err as { response?: { status?: number } })?.response?.status
+                      const msg = status === 403
+                        ? 'Você não tem permissão para deletar este fluxo. Apenas o criador pode fazer isso.'
+                        : 'Erro ao deletar o fluxo. Tente novamente.'
+                      setDeleteFlowError(msg)
+                      setTimeout(() => setDeleteFlowError(null), 4000)
                     }
                   }}
                   disabled={deletingFlow}
@@ -543,7 +550,7 @@ export default function FlowEditorPage() {
                   {deletingFlow ? 'Deletando…' : 'Confirmar exclusão'}
                 </button>
                 <button
-                  onClick={() => setConfirmDeleteFlow(false)}
+                  onClick={() => { setConfirmDeleteFlow(false); setDeleteFlowError(null) }}
                   disabled={deletingFlow}
                   style={{
                     padding: '8px 16px',
@@ -557,6 +564,16 @@ export default function FlowEditorPage() {
                 </button>
               </div>
             </div>
+          )}
+
+          {deleteFlowError && (
+            <p style={{
+              marginTop: 10, fontSize: 12,
+              color: 'oklch(0.45 0.20 15)',
+              fontFamily: 'JetBrains Mono, monospace',
+            }}>
+              {deleteFlowError}
+            </p>
           )}
         </div>
 
