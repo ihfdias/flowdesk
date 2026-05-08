@@ -2,7 +2,7 @@
 
 > Gerencie demandas do seu time com fluxos totalmente personalizáveis.
 
-![placeholder](https://placehold.co/1200x600/f5f0eb/1a1a1a?text=FlowDesk+Board+Screenshot)
+![placeholder](![alt text](<Captura de tela de 2026-05-07 21-13-15.png>))
 
 ---
 
