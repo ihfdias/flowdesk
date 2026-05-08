@@ -2,7 +2,7 @@
 
 > Gerencie demandas do seu time com fluxos totalmente personalizáveis.
 
-![placeholder](![alt text](<Captura de tela de 2026-05-07 21-13-15.png>))
+![FlowDesk Board](Captura%20de%20tela%20de%202026-05-07%2021-13-15.png)
 
 ---
 
