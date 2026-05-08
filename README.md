@@ -6,6 +6,23 @@
 
 ---
 
+## 🔗 Links
+
+- **Demo:** [flowdesk-web-swart.vercel.app/login](https://flowdesk-web-swart.vercel.app/login)
+- **Repositório:** [github.com/ihfdias/flowdesk](https://github.com/ihfdias/flowdesk)
+
+---
+
+## 🚀 Deploy
+
+| Camada | Plataforma |
+|---|---|
+| Frontend | [Vercel](https://vercel.com) |
+| Backend (API) | [Render](https://render.com) |
+| Banco de dados | [Render](https://render.com) (PostgreSQL) |
+
+---
+
 ## O problema
 
 Times de marketing lidam com dezenas de demandas simultâneas — posts, campanhas, briefings, aprovações — espalhadas em planilhas, grupos de WhatsApp e e-mails. Não existe visibilidade do andamento, não existe responsável claro, e nenhuma rastreabilidade de quando e por que algo mudou de status.
@@ -85,6 +102,8 @@ flowdesk/
 ---
 
 ## Instalação e execução local
+
+> Ou acesse a versão em produção em: [flowdesk-web-swart.vercel.app/login](https://flowdesk-web-swart.vercel.app/login)
 
 ### Pré-requisitos
 
