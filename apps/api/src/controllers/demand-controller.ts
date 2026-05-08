@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
-import { createDemand, listDemands, getDemandById, advanceDemand, moveDemand, createComment } from '../services/demand-service'
+import { createDemand, listDemands, getDemandById, advanceDemand, moveDemand, createComment, archiveDemand } from '../services/demand-service'
 
 const createDemandSchema = z.object({
   title: z.string().min(2),
@@ -96,6 +96,15 @@ export async function move(req: Request, res: Response): Promise<void> {
   try {
     const demand = await moveDemand({ demandId: String(req.params.id), movedById: req.user.id, ...result.data })
     res.status(200).json(demand)
+  } catch (err) {
+    handleError(res, err)
+  }
+}
+
+export async function archive(req: Request, res: Response): Promise<void> {
+  try {
+    await archiveDemand(String(req.params.id), req.user.id)
+    res.status(204).end()
   } catch (err) {
     handleError(res, err)
   }

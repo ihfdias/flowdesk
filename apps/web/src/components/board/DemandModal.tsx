@@ -11,6 +11,7 @@ interface Props {
   flow: Flow
   onClose: () => void
   onAdvance: (demandId: string) => Promise<void>
+  onArchive: (demandId: string) => Promise<void>
 }
 
 type TimelineEvent =
@@ -21,7 +22,7 @@ const MUTED = 'oklch(0.50 0.01 60)'
 const BORDER = 'oklch(0.90 0.005 60)'
 const FG = 'oklch(0.18 0.01 60)'
 
-export default function DemandModal({ demand, flow, onClose, onAdvance }: Props) {
+export default function DemandModal({ demand, flow, onClose, onAdvance, onArchive }: Props) {
   const hue = stageHueFromColor(demand.currentStage.color, demand.currentStage.order)
 
   const [history, setHistory] = useState<HistoryEntry[]>([])
@@ -322,9 +323,20 @@ export default function DemandModal({ demand, flow, onClose, onAdvance }: Props)
           </form>
 
           {isLast ? (
-            <span style={{ fontSize: 13, color: MUTED, fontFamily: 'JetBrains Mono, monospace', alignSelf: 'center', whiteSpace: 'nowrap' }}>
-              Etapa final
-            </span>
+            <button
+              onClick={() => onArchive(demand.id)}
+              style={{
+                background: 'oklch(0.45 0.15 155)',
+                color: '#fff', border: 'none',
+                padding: '8px 16px', borderRadius: 6,
+                fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', gap: 6,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Finalizar demanda ✓
+            </button>
           ) : (
             <button
               onClick={() => onAdvance(demand.id)}

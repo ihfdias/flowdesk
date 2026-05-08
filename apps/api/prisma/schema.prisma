@@ -70,6 +70,7 @@ model Demand {
   requestedById  String
   assignedToId   String?
   dueDate        DateTime?
+  archived       Boolean   @default(false)
   createdAt      DateTime  @default(now())
 
   flow         Flow            @relation(fields: [flowId], references: [id])

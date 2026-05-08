@@ -135,6 +135,17 @@ export default function BoardPage() {
     }
   }, [reloadDemands, showToast])
 
+  const handleArchive = useCallback(async (demandId: string) => {
+    try {
+      await api.patch(`/api/demands/${demandId}/archive`)
+      setDemands(prev => prev.filter(d => d.id !== demandId))
+      setSelectedDemand(null)
+      showToast('Demanda finalizada!')
+    } catch {
+      showToast('Erro ao finalizar demanda. Tente novamente.')
+    }
+  }, [showToast])
+
 
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
@@ -374,6 +385,7 @@ export default function BoardPage() {
           flow={selectedFlow}
           onClose={() => setSelectedDemand(null)}
           onAdvance={handleAdvance}
+          onArchive={handleArchive}
         />
       )}
 

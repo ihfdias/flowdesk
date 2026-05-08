@@ -52,6 +52,7 @@ export async function createDemand({ title, description, tag, priority, flowId, 
 export async function listDemands(userId: string, flowId?: string) {
   return prisma.demand.findMany({
     where: {
+      archived: false,
       flow: {
         OR: [
           { createdById: userId },
@@ -156,6 +157,22 @@ export async function createComment(demandId: string, content: string, authorId:
       stage: { select: { id: true, name: true, color: true, order: true, flowId: true } }
     }
   })
+}
+
+export async function archiveDemand(demandId: string, userId: string) {
+  const demand = await prisma.demand.findFirst({
+    where: {
+      id: demandId,
+      flow: {
+        OR: [
+          { createdById: userId },
+          { members: { some: { userId } } },
+        ],
+      },
+    },
+  })
+  if (!demand) throw new Error('Demanda não encontrada')
+  return prisma.demand.update({ where: { id: demandId }, data: { archived: true } })
 }
 
 export async function moveDemand({ demandId, toStageId, movedById, comment }: MoveDemandInput) {
