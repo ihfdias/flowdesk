@@ -39,7 +39,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [focused, setFocused] = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
@@ -139,7 +139,7 @@ export default function LoginPage() {
             color: C.muted, letterSpacing: 0.6,
             textTransform: 'uppercase', marginBottom: 8,
           }}>
-            Bem-vinda de volta
+            Olá, de volta.
           </div>
 
           <h2 style={{
