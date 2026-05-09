@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import api from '../../lib/api'
 import { Flow, User } from '../../lib/types'
+import { useIsMobile } from '../../lib/useIsMobile'
 
 interface Props {
   flow: Flow
@@ -15,6 +16,7 @@ const MUTED = 'oklch(0.50 0.01 60)'
 const ACCENT = 'oklch(0.62 0.20 28)'
 
 export default function NewDemandModal({ flow, members = [], onClose, onCreated }: Props) {
+  const isMobile = useIsMobile()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [tag, setTag] = useState('vídeo')
@@ -89,7 +91,7 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: 720, maxHeight: 'calc(100vh - 80px)',
+          width: isMobile ? 'calc(100vw - 32px)' : 720, maxHeight: isMobile ? 'calc(100vh - 32px)' : 'calc(100vh - 80px)',
           background: 'oklch(1 0 0)',
           borderRadius: 12,
           boxShadow: '0 24px 80px rgba(0,0,0,.16)',

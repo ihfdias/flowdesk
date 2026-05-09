@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../../lib/api'
 import { Flow } from '../../lib/types'
 import Avatar from '../primitives/Avatar'
+import { useIsMobile } from '../../lib/useIsMobile'
 
 interface Member {
   id: string
@@ -20,6 +21,7 @@ const MUTED = 'oklch(0.50 0.01 60)'
 const ACCENT = 'oklch(0.62 0.20 28)'
 
 export default function FlowSettingsModal({ flow, onClose }: Props) {
+  const isMobile = useIsMobile()
   const [members, setMembers] = useState<Member[]>([])
   const [loadingMembers, setLoadingMembers] = useState(true)
   const [email, setEmail] = useState('')
@@ -75,7 +77,7 @@ export default function FlowSettingsModal({ flow, onClose }: Props) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: 520, background: 'oklch(1 0 0)',
+          width: isMobile ? 'calc(100vw - 32px)' : 520, background: 'oklch(1 0 0)',
           borderRadius: 12,
           boxShadow: '0 24px 80px rgba(0,0,0,.16)',
           display: 'flex', flexDirection: 'column',

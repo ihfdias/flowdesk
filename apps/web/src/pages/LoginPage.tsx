@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import api from '../lib/api'
+import { useIsMobile } from '../lib/useIsMobile'
 
 const STAGES = [
   { id: 's1', name: 'Briefing', hue: 28 },
@@ -30,6 +31,7 @@ const C = {
 export default function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
+  const isMobile = useIsMobile()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -55,7 +57,8 @@ export default function LoginPage() {
   return (
     <div style={{
       width: '100vw', height: '100vh',
-      display: 'grid', gridTemplateColumns: '1.1fr 1fr',
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : '1.1fr 1fr',
       fontFamily: 'Inter, system-ui, sans-serif',
       color: C.fg, background: C.bg,
     }}>
@@ -65,7 +68,7 @@ export default function LoginPage() {
         padding: '48px 56px',
         background: C.leftBg,
         borderRight: `1px solid ${C.border}`,
-        display: 'flex', flexDirection: 'column',
+        display: isMobile ? 'none' : 'flex', flexDirection: 'column',
       }}>
         <div style={{
           fontFamily: '"Instrument Serif", Georgia, serif',
@@ -117,9 +120,19 @@ export default function LoginPage() {
 
       {/* Coluna direita — formulário */}
       <div style={{
-        padding: '48px 56px',
+        padding: isMobile ? '40px 24px' : '48px 56px',
         display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        alignItems: isMobile ? 'center' : 'flex-start',
       }}>
+        {isMobile && (
+          <div style={{
+            fontFamily: '"Instrument Serif", Georgia, serif',
+            fontSize: 24, fontStyle: 'italic', letterSpacing: -0.4,
+            marginBottom: 32, alignSelf: 'flex-start',
+          }}>
+            FlowDesk<span style={{ color: C.accent }}>.</span>
+          </div>
+        )}
         <div style={{ maxWidth: 360, width: '100%' }}>
           <div style={{
             fontSize: 11, fontFamily: 'JetBrains Mono, monospace',

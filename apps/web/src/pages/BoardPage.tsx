@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../lib/api'
 import { useAuth } from '../lib/auth'
 import { Flow, Demand, User } from '../lib/types'
+import { useIsMobile } from '../lib/useIsMobile'
 import { stageHueFromColor, stageColor } from '../lib/colors'
 import DemandCard from '../components/board/DemandCard'
 import DemandModal from '../components/board/DemandModal'
@@ -41,6 +42,7 @@ const C = {
 export default function BoardPage() {
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const isMobile = useIsMobile()
   const [searchParams, setSearchParams] = useSearchParams()
   const [flows, setFlows] = useState<Flow[]>([])
   const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null)
@@ -158,22 +160,21 @@ export default function BoardPage() {
 
       {/* ── Header ── */}
       <header style={{
-        padding: '20px 32px 16px',
+        padding: isMobile ? '12px 16px' : '20px 32px 16px',
         background: C.headerBg,
         borderBottom: `1px solid ${C.border}`,
-        display: 'flex', alignItems: 'center', gap: 24,
+        display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 24,
         flexShrink: 0,
+        flexWrap: 'nowrap',
       }}>
         {/* Logo */}
         <div style={{
           fontFamily: 'Instrument Serif, serif',
-          fontSize: 28, fontWeight: 400, fontStyle: 'italic',
-          letterSpacing: -0.8, lineHeight: 1,
+          fontSize: isMobile ? 22 : 28, fontWeight: 400, fontStyle: 'italic',
+          letterSpacing: -0.8, lineHeight: 1, flexShrink: 0,
         }}>
           FlowDesk<span style={{ color: 'oklch(0.62 0.20 28)' }}>.</span>
         </div>
-
-        <div style={{ flex: 1 }} />
 
         {/* Flow selector */}
         <FlowSelector
@@ -183,58 +184,66 @@ export default function BoardPage() {
           onNewFlow={() => setShowNewFlow(true)}
         />
 
-        {/* Team avatars + settings */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {members.length > 0 && (
-            <div style={{ display: 'flex' }}>
-              {members.slice(0, 5).map((member, i) => (
-                <TeamAvatar key={member.id} name={member.name} index={i} />
-              ))}
-            </div>
-          )}
-          <button
-            onClick={() => setShowFlowSettings(true)}
-            title="Configurações do time"
-            style={{
-              background: 'none', border: `1px solid ${C.border}`,
-              borderRadius: 6, padding: '5px 10px',
-              fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
-              color: C.muted, cursor: 'pointer',
-              letterSpacing: 0.4, textTransform: 'uppercase',
-            }}
-          >
-            Time
-          </button>
-        </div>
+        <div style={{ flex: 1 }} />
+
+        {/* Team avatars + settings — desktop only */}
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {members.length > 0 && (
+              <div style={{ display: 'flex' }}>
+                {members.slice(0, 5).map((member, i) => (
+                  <TeamAvatar key={member.id} name={member.name} index={i} />
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => setShowFlowSettings(true)}
+              title="Configurações do time"
+              style={{
+                background: 'none', border: `1px solid ${C.border}`,
+                borderRadius: 6, padding: '5px 10px',
+                fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
+                color: C.muted, cursor: 'pointer',
+                letterSpacing: 0.4, textTransform: 'uppercase',
+              }}
+            >
+              Time
+            </button>
+          </div>
+        )}
 
         {/* Notificações */}
         <NotificationBell />
 
-        {/* ⌘K */}
-        <button
-          onClick={() => setShowPalette(true)}
-          style={{
-            background: 'transparent', border: `1px solid ${C.border}`,
-            color: C.muted, padding: '7px 12px', borderRadius: 6,
-            fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
-            cursor: 'pointer', letterSpacing: 0.4, display: 'flex', alignItems: 'center', gap: 6,
-          }}
-        >
-          <span>⌘K</span>
-        </button>
+        {/* ⌘K — desktop only */}
+        {!isMobile && (
+          <button
+            onClick={() => setShowPalette(true)}
+            style={{
+              background: 'transparent', border: `1px solid ${C.border}`,
+              color: C.muted, padding: '7px 12px', borderRadius: 6,
+              fontFamily: 'JetBrains Mono, monospace', fontSize: 11,
+              cursor: 'pointer', letterSpacing: 0.4, display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <span>⌘K</span>
+          </button>
+        )}
 
-        {/* Editar fluxo */}
-        <button
-          onClick={() => selectedFlow && navigate(`/flows/${selectedFlow.id}/edit`)}
-          style={{
-            background: 'transparent', color: C.fg,
-            border: `1px solid ${C.border}`, padding: '7px 12px', borderRadius: 6,
-            fontFamily: 'inherit', fontSize: 12, fontWeight: 500, cursor: 'pointer',
-            letterSpacing: -0.1,
-          }}
-        >
-          Editar fluxo
-        </button>
+        {/* Editar fluxo — desktop only */}
+        {!isMobile && (
+          <button
+            onClick={() => selectedFlow && navigate(`/flows/${selectedFlow.id}/edit`)}
+            style={{
+              background: 'transparent', color: C.fg,
+              border: `1px solid ${C.border}`, padding: '7px 12px', borderRadius: 6,
+              fontFamily: 'inherit', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              letterSpacing: -0.1,
+            }}
+          >
+            Editar fluxo
+          </button>
+        )}
 
         {/* Nova demanda */}
         <button
@@ -243,10 +252,11 @@ export default function BoardPage() {
             background: C.fg, color: 'oklch(0.98 0 0)',
             border: 'none', padding: '8px 14px', borderRadius: 6,
             fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 6,
+            display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
           }}
         >
-          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Nova demanda
+          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
+          {!isMobile && 'Nova demanda'}
         </button>
 
         {/* Sair */}
@@ -257,27 +267,29 @@ export default function BoardPage() {
             borderRadius: 6, padding: '5px 12px',
             fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
             color: C.muted, cursor: 'pointer',
-            letterSpacing: 0.4, textTransform: 'uppercase',
+            letterSpacing: 0.4, textTransform: 'uppercase', flexShrink: 0,
           }}
         >
           Sair
         </button>
       </header>
 
-      {/* ── Mantra editorial ── */}
-      <div style={{ padding: '24px 32px 16px', display: 'flex', alignItems: 'baseline', gap: 16, flexShrink: 0 }}>
-        <div style={{
-          fontFamily: 'Instrument Serif, serif',
-          fontSize: 42, fontWeight: 400, letterSpacing: -1.4, lineHeight: 1,
-          fontStyle: 'italic',
-        }}>
-          {demands.length}{' '}
-          <span style={{ color: C.muted, fontStyle: 'normal' }}>demandas em jogo,</span>
+      {/* ── Mantra editorial — desktop only ── */}
+      {!isMobile && (
+        <div style={{ padding: '24px 32px 16px', display: 'flex', alignItems: 'baseline', gap: 16, flexShrink: 0 }}>
+          <div style={{
+            fontFamily: 'Instrument Serif, serif',
+            fontSize: 42, fontWeight: 400, letterSpacing: -1.4, lineHeight: 1,
+            fontStyle: 'italic',
+          }}>
+            {demands.length}{' '}
+            <span style={{ color: C.muted, fontStyle: 'normal' }}>demandas em jogo,</span>
+          </div>
+          <div style={{ fontSize: 13, color: C.muted, fontFamily: 'JetBrains Mono, monospace', letterSpacing: 0.3 }}>
+            {formatEditorialDate()}
+          </div>
         </div>
-        <div style={{ fontSize: 13, color: C.muted, fontFamily: 'JetBrains Mono, monospace', letterSpacing: 0.3 }}>
-          {formatEditorialDate()}
-        </div>
-      </div>
+      )}
 
       {/* ── Board ── */}
       <div style={{
@@ -287,7 +299,7 @@ export default function BoardPage() {
           ? `repeat(${selectedFlow.stages.length}, minmax(220px, 1fr))`
           : '1fr',
         gap: 12,
-        padding: '12px 32px 32px',
+        padding: isMobile ? '8px 12px 24px' : '12px 32px 32px',
         alignItems: 'start',
       }}>
         {selectedFlow?.stages.map(stage => {

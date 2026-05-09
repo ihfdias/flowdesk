@@ -5,6 +5,7 @@ import { stageHueFromColor, stageColor } from '../../lib/colors'
 import StageChip from '../primitives/StageChip'
 import Avatar from '../primitives/Avatar'
 import DueDate from '../primitives/DueDate'
+import { useIsMobile } from '../../lib/useIsMobile'
 
 interface Props {
   demand: Demand
@@ -23,6 +24,7 @@ const BORDER = 'oklch(0.90 0.005 60)'
 const FG = 'oklch(0.18 0.01 60)'
 
 export default function DemandModal({ demand, flow, onClose, onAdvance, onArchive }: Props) {
+  const isMobile = useIsMobile()
   const hue = stageHueFromColor(demand.currentStage.color, demand.currentStage.order)
 
   const [history, setHistory] = useState<HistoryEntry[]>([])
@@ -92,7 +94,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '62%', maxWidth: 720, height: '100%',
+          width: isMobile ? '100%' : '62%', maxWidth: 720, height: '100%',
           background: 'oklch(1 0 0)', color: FG,
           display: 'flex', flexDirection: 'column',
           boxShadow: '-20px 0 60px rgba(0,0,0,.2)',
