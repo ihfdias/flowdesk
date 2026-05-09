@@ -139,7 +139,7 @@ export default function LoginPage() {
             color: C.muted, letterSpacing: 0.6,
             textTransform: 'uppercase', marginBottom: 8,
           }}>
-            Olá, de volta.
+            Que bom que você voltou
           </div>
 
           <h2 style={{
