@@ -57,7 +57,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
       const res = await api.get(`/api/demands/${demand.id}`)
       setComments(res.data.comments ?? [])
     } catch {
-      setCommentError('Não foi possível enviar. Tente novamente.')
+      setCommentError("Couldn't send. Try again.")
     } finally {
       setSubmitting(false)
     }
@@ -70,7 +70,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
       const res = await api.post(`/api/ai/summarize/${demand.id}`)
       setAiResult(res.data.summary)
     } catch {
-      setAiResult('Não foi possível gerar o resumo. Verifique se o Ollama está rodando.')
+      setAiResult("Couldn't generate summary. Check if Ollama is running.")
     } finally {
       setAiThinking(false)
     }
@@ -80,6 +80,169 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
     ...history.map(h => ({ kind: 'history' as const, entry: h, date: h.movedAt })),
     ...comments.map(c => ({ kind: 'comment' as const, entry: c, date: c.createdAt })),
   ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          background: 'oklch(1 0 0)', color: FG,
+          display: 'flex', flexDirection: 'column',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          animation: 'fdSlideUp .25s cubic-bezier(.2,.7,.3,1)',
+        }}
+      >
+        <style>{`@keyframes fdSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+
+        {/* AppBar */}
+        <div style={{
+          padding: '14px 16px 12px',
+          borderBottom: `1px solid ${BORDER}`,
+          display: 'flex', alignItems: 'center', gap: 12,
+          flexShrink: 0,
+        }}>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: FG, lineHeight: 1, padding: '4px 4px 4px 0', flexShrink: 0 }}
+          >
+            ←
+          </button>
+          <StageChip name={demand.currentStage.name} hue={hue} size="sm" />
+          <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.4, flex: 1, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            #{demand.id.slice(0, 8).toUpperCase()}
+          </span>
+        </div>
+
+        {/* Hero */}
+        <div style={{ padding: '20px 18px 16px', background: stageColor(hue, 'softer'), flexShrink: 0 }}>
+          <h1 style={{
+            margin: 0,
+            fontFamily: 'Instrument Serif, serif',
+            fontSize: 26, fontWeight: 400, fontStyle: 'italic',
+            letterSpacing: -0.6, lineHeight: 1.1,
+          }}>
+            {demand.title}
+          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: MUTED }}>
+            {demand.assignedTo && (
+              <>
+                <Avatar name={demand.assignedTo.name} size={20} />
+                <span>{demand.assignedTo.name.split(' ')[0]}</span>
+                <span>·</span>
+              </>
+            )}
+            {demand.dueDate && <DueDate date={demand.dueDate} />}
+          </div>
+        </div>
+
+        {/* Quick actions */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8,
+          padding: '12px 14px', borderBottom: `1px solid ${BORDER}`, flexShrink: 0,
+        }}>
+          {isLast ? (
+            <button
+              onClick={() => onArchive(demand.id)}
+              style={{
+                background: 'oklch(0.45 0.15 155)', color: '#fff', border: 'none',
+                padding: '10px 6px', borderRadius: 6, fontFamily: 'inherit',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              }}
+            >
+              ✓ Complete
+            </button>
+          ) : (
+            <button
+              onClick={() => onAdvance(demand.id)}
+              style={{
+                background: stageColor(hue, 'solid'), color: '#fff', border: 'none',
+                padding: '10px 6px', borderRadius: 6, fontFamily: 'inherit',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              }}
+            >
+              Advance →
+            </button>
+          )}
+          <button
+            onClick={summarize}
+            disabled={aiThinking}
+            style={{
+              background: 'transparent', color: 'oklch(0.30 0.10 280)',
+              border: '1px solid oklch(0.55 0.12 280)',
+              padding: '10px 6px', borderRadius: 6, fontFamily: 'inherit',
+              fontSize: 13, fontWeight: 600, cursor: aiThinking ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+              opacity: aiThinking ? 0.6 : 1,
+            }}
+          >
+            <span>✦</span> {aiThinking ? 'thinking…' : 'AI Summary'}
+          </button>
+        </div>
+
+        {/* AI result */}
+        {aiResult && (
+          <div style={{
+            padding: '10px 16px',
+            background: 'oklch(0.97 0.02 280)',
+            borderBottom: `1px solid oklch(0.88 0.04 280)`,
+            fontSize: 13, color: 'oklch(0.25 0.10 280)', lineHeight: 1.5, flexShrink: 0,
+          }}>
+            {aiResult}
+          </div>
+        )}
+
+        {/* Timeline */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 18px 80px' }}>
+          <div style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 14, fontWeight: 700 }}>
+            History
+          </div>
+          <TimelineBody timelineEvents={timelineEvents} hue={hue} />
+        </div>
+
+        {/* Sticky comment bar */}
+        <div style={{ padding: '8px 12px 12px', borderTop: `1px solid ${BORDER}`, background: 'oklch(1 0 0)', flexShrink: 0 }}>
+          {commentError && (
+            <div style={{ fontSize: 11, color: 'oklch(0.55 0.18 28)', fontFamily: 'JetBrains Mono, monospace', marginBottom: 6 }}>
+              {commentError}
+            </div>
+          )}
+          <form onSubmit={submitComment} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              value={comment}
+              onChange={e => { setComment(e.target.value); setCommentError(null) }}
+              placeholder="Say something useful…"
+              disabled={submitting}
+              style={{
+                flex: 1, padding: '9px 12px', borderRadius: 999,
+                border: `1px solid ${BORDER}`,
+                background: 'oklch(0.97 0.005 60)',
+                color: FG, fontFamily: 'inherit', fontSize: 13,
+                outline: 'none',
+                opacity: submitting ? 0.6 : 1,
+              }}
+              onFocus={e => { e.target.style.borderColor = stageColor(hue, 'solid') }}
+              onBlur={e => { e.target.style.borderColor = BORDER }}
+            />
+            <button
+              type="submit"
+              disabled={submitting || !comment.trim()}
+              style={{
+                width: 36, height: 36, borderRadius: '50%', border: 'none',
+                background: stageColor(hue, 'solid'), color: '#fff',
+                fontSize: 16, cursor: submitting ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: submitting || !comment.trim() ? 0.5 : 1, flexShrink: 0,
+              }}
+            >
+              ↑
+            </button>
+          </form>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -94,7 +257,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: isMobile ? '100%' : '62%', maxWidth: 720, height: '100%',
+          width: '62%', maxWidth: 720, height: '100%',
           background: 'oklch(1 0 0)', color: FG,
           display: 'flex', flexDirection: 'column',
           boxShadow: '-20px 0 60px rgba(0,0,0,.2)',
@@ -145,23 +308,23 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
           borderBottom: `1px solid ${BORDER}`,
           display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16,
         }}>
-          <MetaField label="Solicitante">
+          <MetaField label="Requested by">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Avatar name={demand.requestedBy.name} size={22} />
               <span style={{ fontSize: 13, fontWeight: 500 }}>{demand.requestedBy.name}</span>
             </div>
           </MetaField>
-          <MetaField label="Responsável">
+          <MetaField label="Assigned to">
             {demand.assignedTo ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Avatar name={demand.assignedTo.name} size={22} />
                 <span style={{ fontSize: 13, fontWeight: 500 }}>{demand.assignedTo.name}</span>
               </div>
             ) : (
-              <span style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>ninguém ainda</span>
+              <span style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>no one yet</span>
             )}
           </MetaField>
-          <MetaField label="Prazo">
+          <MetaField label="Due date">
             {demand.dueDate
               ? <DueDate date={demand.dueDate} />
               : <span style={{ fontSize: 13, color: MUTED }}>—</span>
@@ -169,7 +332,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
           </MetaField>
         </div>
 
-        {/* ── IA ── */}
+        {/* ── AI ── */}
         <div style={{
           padding: '14px 28px',
           borderBottom: `1px solid ${BORDER}`,
@@ -180,7 +343,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
           {!aiResult && !aiThinking && (
             <>
               <span style={{ fontSize: 13, color: 'oklch(0.30 0.10 280)', flex: 1 }}>
-                Quer um resumo do que rolou nessa demanda?
+                Want a summary of what happened with this demand?
               </span>
               <button
                 onClick={summarize}
@@ -193,13 +356,13 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
                   cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >
-                Resumir com IA
+                Summarize with AI
               </button>
             </>
           )}
           {aiThinking && (
             <span style={{ fontSize: 13, color: 'oklch(0.30 0.10 280)', fontStyle: 'italic' }}>
-              pensando…
+              thinking…
             </span>
           )}
           {aiResult && (
@@ -216,75 +379,12 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
             color: MUTED, letterSpacing: 0.5, textTransform: 'uppercase',
             marginBottom: 16,
           }}>
-            Histórico
+            History
           </div>
-
-          {timelineEvents.length === 0 ? (
-            <p style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>nenhum evento ainda.</p>
-          ) : (
-            <div style={{ position: 'relative', paddingLeft: 24 }}>
-              {/* Linha vertical */}
-              <div style={{
-                position: 'absolute', left: 9, top: 6, bottom: 6,
-                width: 1, background: BORDER,
-              }} />
-
-              {timelineEvents.map((ev, i) => {
-                if (ev.kind === 'history') {
-                  const h = ev.entry
-                  const toHue = stageHueFromColor(h.toStage.color, h.toStage.order)
-                  const time = new Date(h.movedAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-                  return (
-                    <div key={`h-${i}`} style={{ position: 'relative', paddingBottom: 18 }}>
-                      <div style={{
-                        position: 'absolute', left: -19, top: 4,
-                        width: 11, height: 11, borderRadius: '50%',
-                        background: stageColor(toHue, 'solid'),
-                        boxShadow: '0 0 0 3px oklch(1 0 0)',
-                      }} />
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
-                        <span style={{ fontSize: 12, fontWeight: 600 }}>{h.movedBy.name}</span>
-                        <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.3 }}>{time}</span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        {h.fromStage && (
-                          <>
-                            <StageChip name={h.fromStage.name} hue={stageHueFromColor(h.fromStage.color, h.fromStage.order)} size="sm" />
-                            <span style={{ color: MUTED, fontSize: 12 }}>→</span>
-                          </>
-                        )}
-                        <StageChip name={h.toStage.name} hue={toHue} size="sm" />
-                        {h.comment && (
-                          <span style={{ fontSize: 12, color: MUTED, fontStyle: 'italic' }}>"{h.comment}"</span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                } else {
-                  const c = ev.entry
-                  const time = new Date(c.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
-                  return (
-                    <div key={`c-${i}`} style={{ position: 'relative', paddingBottom: 18 }}>
-                      <div style={{
-                        position: 'absolute', left: -19, top: 4,
-                        width: 11, height: 11, borderRadius: '50%',
-                        background: 'oklch(0.70 0.01 60)',
-                        boxShadow: '0 0 0 3px oklch(1 0 0)',
-                      }} />
-                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, fontWeight: 600 }}>{c.author.name}</span>
-                        <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.3 }}>{time}</span>
-                      </div>
-                      <div style={{ fontSize: 13, lineHeight: 1.5, color: FG }}>{c.content}</div>
-                    </div>
-                  )
-                }
-              })}
-            </div>
-          )}
+          <TimelineBody timelineEvents={timelineEvents} hue={hue} />
         </div>
 
-        {/* ── Footer: comentar + avançar ── */}
+        {/* ── Footer: comment + advance ── */}
         <div style={{ borderTop: `1px solid ${BORDER}` }}>
           {commentError && (
             <div style={{ padding: '6px 16px', fontSize: 12, color: 'oklch(0.55 0.18 28)', fontFamily: 'JetBrains Mono, monospace' }}>
@@ -292,72 +392,134 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
             </div>
           )}
           <div style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
-          <form onSubmit={submitComment} style={{ flex: 1, display: 'flex', gap: 8 }}>
-            <input
-              value={comment}
-              onChange={e => { setComment(e.target.value); setCommentError(null) }}
-              placeholder="Diga algo construtivo…"
-              disabled={submitting}
-              style={{
-                flex: 1, padding: '8px 12px', borderRadius: 6,
-                border: `1px solid ${BORDER}`,
-                background: 'oklch(0.99 0 0)',
-                color: FG, fontFamily: 'inherit', fontSize: 13,
-                outline: 'none', transition: 'border-color .15s',
-                opacity: submitting ? 0.6 : 1,
-              }}
-              onFocus={e => { e.target.style.borderColor = stageColor(hue, 'solid') }}
-              onBlur={e => { e.target.style.borderColor = BORDER }}
-            />
-            <button
-              type="submit"
-              disabled={submitting || !comment.trim()}
-              style={{
-                background: 'transparent', border: `1px solid ${BORDER}`,
-                color: FG, padding: '8px 14px', borderRadius: 6,
-                fontSize: 13, cursor: submitting ? 'not-allowed' : 'pointer',
-                fontFamily: 'inherit', fontWeight: 500,
-                opacity: submitting || !comment.trim() ? 0.5 : 1,
-              }}
-            >
-              {submitting ? '…' : 'Comentar'}
-            </button>
-          </form>
+            <form onSubmit={submitComment} style={{ flex: 1, display: 'flex', gap: 8 }}>
+              <input
+                value={comment}
+                onChange={e => { setComment(e.target.value); setCommentError(null) }}
+                placeholder="Say something useful…"
+                disabled={submitting}
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 6,
+                  border: `1px solid ${BORDER}`,
+                  background: 'oklch(0.99 0 0)',
+                  color: FG, fontFamily: 'inherit', fontSize: 13,
+                  outline: 'none', transition: 'border-color .15s',
+                  opacity: submitting ? 0.6 : 1,
+                }}
+                onFocus={e => { e.target.style.borderColor = stageColor(hue, 'solid') }}
+                onBlur={e => { e.target.style.borderColor = BORDER }}
+              />
+              <button
+                type="submit"
+                disabled={submitting || !comment.trim()}
+                style={{
+                  background: 'transparent', border: `1px solid ${BORDER}`,
+                  color: FG, padding: '8px 14px', borderRadius: 6,
+                  fontSize: 13, cursor: submitting ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit', fontWeight: 500,
+                  opacity: submitting || !comment.trim() ? 0.5 : 1,
+                }}
+              >
+                {submitting ? '…' : 'Comment'}
+              </button>
+            </form>
 
-          {isLast ? (
-            <button
-              onClick={() => onArchive(demand.id)}
-              style={{
-                background: 'oklch(0.45 0.15 155)',
-                color: '#fff', border: 'none',
-                padding: '8px 16px', borderRadius: 6,
-                fontSize: 13, fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'inherit',
-                display: 'flex', alignItems: 'center', gap: 6,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Finalizar demanda ✓
-            </button>
-          ) : (
-            <button
-              onClick={() => onAdvance(demand.id)}
-              style={{
-                background: stageColor(hue, 'solid'),
-                color: '#fff', border: 'none',
-                padding: '8px 16px', borderRadius: 6,
-                fontSize: 13, fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'inherit',
-                display: 'flex', alignItems: 'center', gap: 6,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              Avançar →
-            </button>
-          )}
+            {isLast ? (
+              <button
+                onClick={() => onArchive(demand.id)}
+                style={{
+                  background: 'oklch(0.45 0.15 155)',
+                  color: '#fff', border: 'none',
+                  padding: '8px 16px', borderRadius: 6,
+                  fontSize: 13, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Complete demand ✓
+              </button>
+            ) : (
+              <button
+                onClick={() => onAdvance(demand.id)}
+                style={{
+                  background: stageColor(hue, 'solid'),
+                  color: '#fff', border: 'none',
+                  padding: '8px 16px', borderRadius: 6,
+                  fontSize: 13, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Advance →
+              </button>
+            )}
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function TimelineBody({ timelineEvents, hue }: { timelineEvents: TimelineEvent[]; hue: number }) {
+  if (timelineEvents.length === 0) {
+    return <p style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>no events yet.</p>
+  }
+  return (
+    <div style={{ position: 'relative', paddingLeft: 24 }}>
+      <div style={{ position: 'absolute', left: 9, top: 6, bottom: 6, width: 1, background: BORDER }} />
+      {timelineEvents.map((ev, i) => {
+        if (ev.kind === 'history') {
+          const h = ev.entry
+          const toHue = stageHueFromColor(h.toStage.color, h.toStage.order)
+          const time = new Date(h.movedAt).toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+          return (
+            <div key={`h-${i}`} style={{ position: 'relative', paddingBottom: 18 }}>
+              <div style={{
+                position: 'absolute', left: -19, top: 4,
+                width: 11, height: 11, borderRadius: '50%',
+                background: stageColor(toHue, 'solid'),
+                boxShadow: '0 0 0 3px oklch(1 0 0)',
+              }} />
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600 }}>{h.movedBy.name}</span>
+                <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.3 }}>{time}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                {h.fromStage && (
+                  <>
+                    <StageChip name={h.fromStage.name} hue={stageHueFromColor(h.fromStage.color, h.fromStage.order)} size="sm" />
+                    <span style={{ color: MUTED, fontSize: 12 }}>→</span>
+                  </>
+                )}
+                <StageChip name={h.toStage.name} hue={toHue} size="sm" />
+                {h.comment && (
+                  <span style={{ fontSize: 12, color: MUTED, fontStyle: 'italic' }}>"{h.comment}"</span>
+                )}
+              </div>
+            </div>
+          )
+        } else {
+          const c = ev.entry
+          const time = new Date(c.createdAt).toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+          return (
+            <div key={`c-${i}`} style={{ position: 'relative', paddingBottom: 18 }}>
+              <div style={{
+                position: 'absolute', left: -19, top: 4,
+                width: 11, height: 11, borderRadius: '50%',
+                background: 'oklch(0.70 0.01 60)',
+                boxShadow: '0 0 0 3px oklch(1 0 0)',
+              }} />
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 600 }}>{c.author.name}</span>
+                <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.3 }}>{time}</span>
+              </div>
+              <div style={{ fontSize: 13, lineHeight: 1.5, color: FG }}>{c.content}</div>
+            </div>
+          )
+        }
+      })}
     </div>
   )
 }

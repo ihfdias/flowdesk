@@ -31,7 +31,7 @@ interface AuthResult {
 export async function registerUser({ name, email, password, role = Role.MEMBER }: RegisterInput): Promise<AuthResult> {
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
-    throw new Error('E-mail já cadastrado')
+    throw new Error('Email already registered')
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
@@ -52,12 +52,12 @@ export async function loginUser({ email, password }: LoginInput): Promise<AuthRe
   const user = await prisma.user.findUnique({ where: { email } })
 
   if (!user) {
-    throw new Error('Credenciais inválidas')
+    throw new Error('Invalid credentials')
   }
 
   const passwordMatch = await bcrypt.compare(password, user.passwordHash)
   if (!passwordMatch) {
-    throw new Error('Credenciais inválidas')
+    throw new Error('Invalid credentials')
   }
 
   const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' })

@@ -30,7 +30,7 @@ export default function NewFlowModal({ onClose, onCreated }: Props) {
       })
       onCreated(res.data)
     } catch {
-      setError('Não foi possível criar o fluxo. Tente novamente.')
+      setError("Couldn't create flow. Try again.")
       setLoading(false)
     }
   }
@@ -62,7 +62,7 @@ export default function NewFlowModal({ onClose, onCreated }: Props) {
               fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
               color: MUTED, letterSpacing: 0.6, textTransform: 'uppercase',
             }}>
-              Novo fluxo
+              New flow
             </span>
             <button
               onClick={onClose}
@@ -77,17 +77,17 @@ export default function NewFlowModal({ onClose, onCreated }: Props) {
             fontSize: 28, fontWeight: 400, fontStyle: 'italic',
             letterSpacing: -0.6, lineHeight: 1.1, color: FG,
           }}>
-            Qual o nome do fluxo?
+            What's the flow name?
           </h2>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <Field label="Nome *">
+          <Field label="Name *">
             <input
               autoFocus
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="Ex: Campanha de Lançamento"
+              placeholder="Ex: Launch Campaign"
               required
               style={inputStyle}
               onFocus={e => { e.target.style.borderColor = ACCENT }}
@@ -95,11 +95,11 @@ export default function NewFlowModal({ onClose, onCreated }: Props) {
             />
           </Field>
 
-          <Field label="Descrição">
+          <Field label="Description">
             <input
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder="Opcional…"
+              placeholder="Optional…"
               style={inputStyle}
               onFocus={e => { e.target.style.borderColor = ACCENT }}
               onBlur={e => { e.target.style.borderColor = BORDER }}
@@ -122,7 +122,7 @@ export default function NewFlowModal({ onClose, onCreated }: Props) {
                 fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
               }}
             >
-              Cancelar
+              Cancel
             </button>
             <button
               type="submit"
@@ -136,7 +136,7 @@ export default function NewFlowModal({ onClose, onCreated }: Props) {
                 transition: 'background .15s',
               }}
             >
-              {loading ? 'Criando…' : 'Criar fluxo'}
+              {loading ? 'Creating…' : 'Create flow'}
             </button>
           </div>
         </form>

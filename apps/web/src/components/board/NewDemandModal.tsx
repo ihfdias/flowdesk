@@ -19,14 +19,13 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
   const isMobile = useIsMobile()
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [tag, setTag] = useState('vídeo')
-  const [priority, setPriority] = useState('média')
+  const [tag, setTag] = useState('video')
+  const [priority, setPriority] = useState('medium')
   const [assignedToId, setAssignedToId] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // IA: sugestão de etapas
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [suggestingAI, setSuggestingAI] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -73,36 +72,57 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
       })
       onCreated()
     } catch {
-      setError('Não foi possível criar a demanda. Tente novamente.')
+      setError("Couldn't create demand. Try again.")
       setLoading(false)
     }
   }
 
+  const overlayStyle: React.CSSProperties = {
+    position: 'fixed', inset: 0, zIndex: 100,
+    background: 'oklch(0.18 0.01 60 / 0.4)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: isMobile ? 'flex-end' : 'center',
+    justifyContent: 'center',
+  }
+
+  const sheetStyle: React.CSSProperties = isMobile
+    ? {
+        width: '100%',
+        maxHeight: '92vh',
+        background: 'oklch(1 0 0)',
+        borderRadius: '16px 16px 0 0',
+        boxShadow: '0 -8px 40px rgba(0,0,0,.18)',
+        display: 'flex', flexDirection: 'column',
+        animation: 'ndUp .25s cubic-bezier(.2,.7,.3,1)',
+        overflow: 'hidden',
+      }
+    : {
+        width: 720, maxHeight: 'calc(100vh - 80px)',
+        background: 'oklch(1 0 0)',
+        borderRadius: 12,
+        boxShadow: '0 24px 80px rgba(0,0,0,.16)',
+        display: 'flex', flexDirection: 'column',
+        animation: 'ndIn .2s cubic-bezier(.2,.7,.3,1)',
+      }
+
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 100,
-        background: 'oklch(0.18 0.01 60 / 0.4)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}
-    >
-      <div
-        onClick={e => e.stopPropagation()}
-        style={{
-          width: isMobile ? 'calc(100vw - 32px)' : 720, maxHeight: isMobile ? 'calc(100vh - 32px)' : 'calc(100vh - 80px)',
-          background: 'oklch(1 0 0)',
-          borderRadius: 12,
-          boxShadow: '0 24px 80px rgba(0,0,0,.16)',
-          display: 'flex', flexDirection: 'column',
-          animation: 'ndIn .2s cubic-bezier(.2,.7,.3,1)',
-        }}
-      >
-        <style>{`@keyframes ndIn{from{transform:scale(.96) translateY(8px);opacity:0}to{transform:scale(1);opacity:1}}`}</style>
+    <div onClick={onClose} style={overlayStyle}>
+      <style>{`
+        @keyframes ndIn{from{transform:scale(.96) translateY(8px);opacity:0}to{transform:scale(1);opacity:1}}
+        @keyframes ndUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+      `}</style>
+      <div onClick={e => e.stopPropagation()} style={sheetStyle}>
+
+        {/* Mobile drag handle */}
+        {isMobile && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0 4px' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'oklch(0.86 0.005 60)' }} />
+          </div>
+        )}
 
         {/* Header */}
-        <div style={{ padding: '24px 28px 20px', borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ padding: isMobile ? '8px 20px 14px' : '24px 28px 20px', borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{
               fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
@@ -110,32 +130,34 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
             }}>
               {flow.name}
             </span>
-            <button
-              onClick={onClose}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: MUTED, lineHeight: 1, padding: '0 2px' }}
-            >
-              ×
-            </button>
+            {!isMobile && (
+              <button
+                onClick={onClose}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: MUTED, lineHeight: 1, padding: '0 2px' }}
+              >
+                ×
+              </button>
+            )}
           </div>
           <h2 style={{
             margin: 0,
             fontFamily: 'Instrument Serif, serif',
-            fontSize: 28, fontWeight: 400, fontStyle: 'italic',
+            fontSize: isMobile ? 24 : 28, fontWeight: 400, fontStyle: 'italic',
             letterSpacing: -0.6, lineHeight: 1.1, color: FG,
           }}>
-            O que precisa rolar?
+            What needs to happen?
           </h2>
         </div>
 
-        {/* Formulário */}
-        <form onSubmit={handleSubmit} style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ padding: isMobile ? '20px 20px' : '24px 28px', display: 'flex', flexDirection: 'column', gap: 18, overflowY: 'auto', flex: 1 }}>
 
-          <Field label="Título *">
+          <Field label="Title *">
             <input
               autoFocus
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="Ex: Campanha de lançamento…"
+              placeholder="Ex: Launch campaign…"
               required
               style={inputStyle}
               onFocus={e => { e.target.style.borderColor = ACCENT }}
@@ -143,17 +165,16 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
             />
           </Field>
 
-          <Field label="Descrição">
+          <Field label="Description">
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder="Contexto, objetivo, detalhes…"
+              placeholder="Context, goals, details…"
               rows={3}
               style={{ ...inputStyle, resize: 'vertical' }}
               onFocus={e => { e.target.style.borderColor = ACCENT }}
               onBlur={e => { e.target.style.borderColor = BORDER }}
             />
-            {/* Sugestão de etapas pela IA */}
             {(suggestingAI || suggestions.length > 0) && (
               <div style={{
                 marginTop: 8, padding: '10px 12px',
@@ -166,19 +187,17 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
                   color: 'oklch(0.45 0.15 280)', letterSpacing: 0.5,
                   display: 'flex', alignItems: 'center', gap: 5,
                 }}>
-                  <span>✦</span> Etapas sugeridas pela IA
+                  <span>✦</span> AI-suggested stages
                 </span>
                 {suggestingAI ? (
                   <span style={{ fontSize: 12, color: 'oklch(0.50 0.10 280)', fontStyle: 'italic' }}>
-                    pensando…
+                    thinking…
                   </span>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                     {suggestions.map((s, i) => (
                       <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        {i > 0 && (
-                          <span style={{ fontSize: 10, color: 'oklch(0.65 0.08 280)' }}>→</span>
-                        )}
+                        {i > 0 && <span style={{ fontSize: 10, color: 'oklch(0.65 0.08 280)' }}>→</span>}
                         <span style={{
                           fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
                           color: 'oklch(0.30 0.12 280)',
@@ -197,9 +216,9 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
           </Field>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <Field label="Tipo">
+            <Field label="Type">
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {(['vídeo', 'social', 'editorial', 'web', 'PR'] as const).map(t => (
+                {(['video', 'social', 'editorial', 'web', 'PR'] as const).map(t => (
                   <button key={t} type="button" onClick={() => setTag(t)} style={{
                     padding: '5px 10px', borderRadius: 4, fontSize: 12,
                     border: `1px solid ${tag === t ? ACCENT : BORDER}`,
@@ -211,9 +230,9 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
                 ))}
               </div>
             </Field>
-            <Field label="Prioridade">
+            <Field label="Priority">
               <div style={{ display: 'flex', gap: 4 }}>
-                {(['baixa', 'média', 'alta'] as const).map((p, i) => {
+                {(['low', 'medium', 'high'] as const).map((p, i) => {
                   const colors = ['oklch(0.72 0.04 240)', 'oklch(0.72 0.14 75)', 'oklch(0.62 0.18 28)']
                   const c = colors[i]
                   return (
@@ -233,7 +252,7 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
 
           {members.length > 0 ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <Field label="Responsável">
+              <Field label="Assigned to">
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                   {members.map(m => (
                     <button key={m.id} type="button" onClick={() => setAssignedToId(m.id)}
@@ -248,7 +267,7 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
                   ))}
                 </div>
               </Field>
-              <Field label="Prazo">
+              <Field label="Due date">
                 <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                   style={{ ...inputStyle, colorScheme: 'light' }}
                   onFocus={e => { e.target.style.borderColor = ACCENT }}
@@ -257,7 +276,7 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
               </Field>
             </div>
           ) : (
-            <Field label="Prazo">
+            <Field label="Due date">
               <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
                 style={{ ...inputStyle, colorScheme: 'light' }}
                 onFocus={e => { e.target.style.borderColor = ACCENT }}
@@ -282,7 +301,7 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
                 fontSize: 13, fontFamily: 'inherit', cursor: 'pointer',
               }}
             >
-              Cancelar
+              Cancel
             </button>
             <button
               type="submit"
@@ -296,7 +315,7 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
                 transition: 'background .15s',
               }}
             >
-              {loading ? 'Criando…' : 'Criar demanda'}
+              {loading ? 'Creating…' : 'Create demand'}
             </button>
           </div>
         </form>

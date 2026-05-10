@@ -46,7 +46,7 @@ export default function FlowSettingsModal({ flow, onClose }: Props) {
       setEmail('')
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      setAddError(msg ?? 'Não foi possível adicionar. Tente novamente.')
+      setAddError(msg ?? "Couldn't add member. Try again.")
     } finally {
       setAdding(false)
     }
@@ -94,7 +94,7 @@ export default function FlowSettingsModal({ flow, onClose }: Props) {
               fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
               color: MUTED, letterSpacing: 0.6, textTransform: 'uppercase',
             }}>
-              Configurações do fluxo
+              Flow settings
             </span>
             <button
               onClick={onClose}
@@ -119,13 +119,13 @@ export default function FlowSettingsModal({ flow, onClose }: Props) {
             fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
             color: MUTED, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 14,
           }}>
-            Membros
+            Members
           </div>
 
           {loadingMembers ? (
-            <div style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>carregando…</div>
+            <div style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>loading…</div>
           ) : members.length === 0 ? (
-            <div style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>nenhum membro ainda.</div>
+            <div style={{ fontSize: 13, color: MUTED, fontStyle: 'italic' }}>no members yet.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {members.map(m => (
@@ -178,7 +178,7 @@ export default function FlowSettingsModal({ flow, onClose }: Props) {
               type="email"
               value={email}
               onChange={e => { setEmail(e.target.value); setAddError(null) }}
-              placeholder="email@exemplo.com"
+              placeholder="email@example.com"
               disabled={adding}
               style={{
                 flex: 1, padding: '9px 12px', borderRadius: 6,
@@ -204,7 +204,7 @@ export default function FlowSettingsModal({ flow, onClose }: Props) {
                 transition: 'background .15s',
               }}
             >
-              {adding ? '…' : '+ Adicionar'}
+              {adding ? '…' : '+ Add'}
             </button>
           </form>
         </div>

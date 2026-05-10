@@ -28,19 +28,19 @@ const ACCENT = 'oklch(0.62 0.20 28)'
 
 const STEP_META = [
   {
-    tag:   'passo um',
-    title: 'Quem é o\ntime?',
-    sub:   'Convide quem vai abrir, executar e aprovar demandas.',
+    tag:   'step one',
+    title: "Who's on\nthe team?",
+    sub:   'Invite who will open, execute and approve demands.',
   },
   {
-    tag:   'passo dois',
-    title: 'Seu primeiro\nfluxo.',
-    sub:   'Escolha um nome e as etapas. Você pode editar tudo depois.',
+    tag:   'step two',
+    title: 'Your first\nflow.',
+    sub:   'Choose a name and stages. You can edit everything later.',
   },
   {
-    tag:   'último passo',
-    title: 'Tudo\npronto.',
-    sub:   'Seu fluxo está no ar. Hora de abrir a primeira demanda de verdade.',
+    tag:   'last step',
+    title: "All\nset.",
+    sub:   'Your flow is live. Time to open the first real demand.',
   },
 ]
 
@@ -86,7 +86,7 @@ export default function OnboardingPage() {
       setStages(valid)
       setStep(3)
     } catch {
-      setError('Não foi possível criar o fluxo. Tente novamente.')
+      setError("Couldn't create flow. Try again.")
     } finally {
       setLoading(false)
     }
@@ -105,10 +105,10 @@ export default function OnboardingPage() {
                       : step === 2 ? handleCreate
                       : finish
 
-  const primaryLabel = loading       ? 'Criando…'
-                     : step === 2    ? 'Criar fluxo →'
-                     : step === 3    ? 'Abrir o board →'
-                     : 'Continuar →'
+  const primaryLabel = loading       ? 'Creating…'
+                     : step === 2    ? 'Create flow →'
+                     : step === 3    ? 'Open board →'
+                     : 'Continue →'
 
   const meta = STEP_META[step - 1]
 
@@ -232,7 +232,7 @@ export default function OnboardingPage() {
               opacity: step === 1 ? 0.4 : 1, padding: '6px 10px',
             }}
           >
-            ← voltar
+            ← back
           </button>
           <button
             onClick={handlePrimary}
@@ -268,7 +268,7 @@ function StepWelcome({ teamName, onTeamNameChange, invites, onInvitesChange }: S
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       <div>
-        <FieldLabel>Convidar por e-mail</FieldLabel>
+        <FieldLabel>Invite by email</FieldLabel>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
           {invites.map((v, i) => (
             <input
@@ -305,7 +305,7 @@ function StepWelcome({ teamName, onTeamNameChange, invites, onInvitesChange }: S
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = FG }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = MUTED }}
           >
-            + adicionar mais
+            + add more
           </button>
         </div>
       </div>
@@ -315,7 +315,7 @@ function StepWelcome({ teamName, onTeamNameChange, invites, onInvitesChange }: S
         background: 'oklch(0.96 0.005 80)',
         borderRadius: 6, border: `1px solid ${BORDER}`,
       }}>
-        <FieldLabel>Nome do time</FieldLabel>
+        <FieldLabel>Team name</FieldLabel>
         <input
           value={teamName}
           onChange={e => onTeamNameChange(e.target.value)}
@@ -354,14 +354,14 @@ function StepCreate({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
       <div>
-        <StepLabel>Passo 02 — Seu fluxo</StepLabel>
+        <StepLabel>Step 02 — Your flow</StepLabel>
         <h2 style={{
           margin: '16px 0 0',
           fontFamily: '"Instrument Serif", Georgia, serif',
           fontSize: 36, fontWeight: 400, fontStyle: 'italic',
           letterSpacing: -1.4, lineHeight: 1.05,
         }}>
-          Como chamar seu<br />primeiro fluxo?
+          What should we call<br />your first flow?
         </h2>
       </div>
 
@@ -386,7 +386,7 @@ function StepCreate({
 
       {/* Etapas */}
       <div>
-        <FieldLabel>Etapas</FieldLabel>
+        <FieldLabel>Stages</FieldLabel>
         <div style={{
           display: 'flex', flexDirection: 'column', gap: 6,
           marginTop: 10, maxHeight: 220, overflowY: 'auto',
@@ -402,7 +402,7 @@ function StepCreate({
                 <input
                   value={stage.name}
                   onChange={e => onUpdate(stage.localId, e.target.value)}
-                  placeholder="Nome da etapa"
+                  placeholder="Stage name"
                   style={{
                     flex: 1, padding: '7px 10px', borderRadius: 5,
                     border: `1px solid ${BORDER}`,
@@ -445,7 +445,7 @@ function StepCreate({
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = FG }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = MUTED }}
         >
-          <span style={{ fontSize: 15, lineHeight: 1 }}>+</span> Adicionar etapa
+          <span style={{ fontSize: 15, lineHeight: 1 }}>+</span> Add stage
         </button>
       </div>
 
@@ -469,7 +469,7 @@ function StepDone({ flowName, stages }: { flowName: string; stages: StageEntry[]
   const count = stages.length
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <StepLabel>Passo 03 — Tudo certo!</StepLabel>
+      <StepLabel>Step 03 — All done!</StepLabel>
 
       <h2 style={{
         margin: 0,
@@ -477,12 +477,12 @@ function StepDone({ flowName, stages }: { flowName: string; stages: StageEntry[]
         fontSize: 44, fontWeight: 400, fontStyle: 'italic',
         letterSpacing: -1.8, lineHeight: 1.0,
       }}>
-        Seu fluxo<br />está no ar.
+        Your flow<br />is live.
       </h2>
 
       <p style={{ margin: 0, fontSize: 14, lineHeight: 1.55, color: 'oklch(0.42 0.01 60)' }}>
-        Você criou <strong style={{ color: FG }}>{flowName}</strong> com{' '}
-        {count} {count === 1 ? 'etapa' : 'etapas'}.
+        You created <strong style={{ color: FG }}>{flowName}</strong> with{' '}
+        {count} {count === 1 ? 'stage' : 'stages'}.
       </p>
 
       {/* Preview das etapas como chips com setas */}

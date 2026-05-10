@@ -16,8 +16,8 @@ import NotificationBell from '../components/NotificationBell'
 const STAGE_GLYPHS = ['◐', '✺', '◇', '◈', '●', '◉', '◎']
 const getGlyph = (order: number) => STAGE_GLYPHS[order % STAGE_GLYPHS.length]
 
-const DAY_NAMES = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
-const MONTH_NAMES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 function formatEditorialDate() {
   const now = new Date()
@@ -57,6 +57,7 @@ export default function BoardPage() {
   const [showPalette, setShowPalette] = useState(false)
   const [showNewFlow, setShowNewFlow] = useState(false)
   const [showFlowSettings, setShowFlowSettings] = useState(false)
+  const [activeMobileStageId, setActiveMobileStageId] = useState<string | null>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -93,6 +94,12 @@ export default function BoardPage() {
     if (!selectedFlow) { setMembers([]); return }
     api.get(`/api/demands?flowId=${selectedFlow.id}`).then(res => setDemands(res.data))
     api.get(`/api/flows/${selectedFlow.id}/members`).then(res => setMembers(res.data.map((m: { user: User }) => m.user)))
+    if (selectedFlow.stages.length > 0) {
+      setActiveMobileStageId(prev => {
+        const stillValid = prev && selectedFlow.stages.some(s => s.id === prev)
+        return stillValid ? prev : selectedFlow.stages[0].id
+      })
+    }
   }, [selectedFlow])
 
   const reloadDemands = useCallback(async () => {
@@ -133,7 +140,7 @@ export default function BoardPage() {
       await reloadDemands()
       setSelectedDemand(null)
     } catch {
-      showToast('Erro ao avançar demanda. Tente novamente.')
+      showToast('Error advancing demand. Try again.')
     }
   }, [reloadDemands, showToast])
 
@@ -142,16 +149,19 @@ export default function BoardPage() {
       await api.patch(`/api/demands/${demandId}/archive`)
       setDemands(prev => prev.filter(d => d.id !== demandId))
       setSelectedDemand(null)
-      showToast('Demanda finalizada!')
+      showToast('Demand completed!')
     } catch {
-      showToast('Erro ao finalizar demanda. Tente novamente.')
+      showToast('Error completing demand. Try again.')
     }
   }, [showToast])
 
+  const activeStageDemands = activeMobileStageId
+    ? demands.filter(d => d.currentStageId === activeMobileStageId)
+    : []
 
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
-      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: C.muted }}>carregando...</span>
+      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: C.muted }}>loading...</span>
     </div>
   )
 
@@ -198,7 +208,7 @@ export default function BoardPage() {
             )}
             <button
               onClick={() => setShowFlowSettings(true)}
-              title="Configurações do time"
+              title="Team settings"
               style={{
                 background: 'none', border: `1px solid ${C.border}`,
                 borderRadius: 6, padding: '5px 10px',
@@ -207,12 +217,12 @@ export default function BoardPage() {
                 letterSpacing: 0.4, textTransform: 'uppercase',
               }}
             >
-              Time
+              Team
             </button>
           </div>
         )}
 
-        {/* Notificações */}
+        {/* Notifications */}
         <NotificationBell />
 
         {/* ⌘K — desktop only */}
@@ -230,7 +240,7 @@ export default function BoardPage() {
           </button>
         )}
 
-        {/* Editar fluxo — desktop only */}
+        {/* Edit flow — desktop only */}
         {!isMobile && (
           <button
             onClick={() => selectedFlow && navigate(`/flows/${selectedFlow.id}/edit`)}
@@ -241,40 +251,42 @@ export default function BoardPage() {
               letterSpacing: -0.1,
             }}
           >
-            Editar fluxo
+            Edit flow
           </button>
         )}
 
-        {/* Nova demanda */}
-        <button
-          onClick={() => setShowNewDemand(true)}
-          style={{
-            background: C.fg, color: 'oklch(0.98 0 0)',
-            border: 'none', padding: '8px 14px', borderRadius: 6,
-            fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
-          }}
-        >
-          <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
-          {!isMobile && 'Nova demanda'}
-        </button>
+        {/* New demand — desktop only */}
+        {!isMobile && (
+          <button
+            onClick={() => setShowNewDemand(true)}
+            style={{
+              background: C.fg, color: 'oklch(0.98 0 0)',
+              border: 'none', padding: '8px 14px', borderRadius: 6,
+              fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+            }}
+          >
+            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
+            New demand
+          </button>
+        )}
 
-        {/* Sair */}
+        {/* Sign out */}
         <button
           onClick={logout}
           style={{
             background: 'none', border: `1px solid ${C.border}`,
-            borderRadius: 6, padding: '5px 12px',
+            borderRadius: 6, padding: isMobile ? '5px 8px' : '5px 12px',
             fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
             color: C.muted, cursor: 'pointer',
             letterSpacing: 0.4, textTransform: 'uppercase', flexShrink: 0,
           }}
         >
-          Sair
+          {isMobile ? '↩' : 'Sign out'}
         </button>
       </header>
 
-      {/* ── Mantra editorial — desktop only ── */}
+      {/* ── Editorial mantra — desktop only ── */}
       {!isMobile && (
         <div style={{ padding: '24px 32px 16px', display: 'flex', alignItems: 'baseline', gap: 16, flexShrink: 0 }}>
           <div style={{
@@ -283,7 +295,7 @@ export default function BoardPage() {
             fontStyle: 'italic',
           }}>
             {demands.length}{' '}
-            <span style={{ color: C.muted, fontStyle: 'normal' }}>demandas em jogo,</span>
+            <span style={{ color: C.muted, fontStyle: 'normal' }}>demands in flight,</span>
           </div>
           <div style={{ fontSize: 13, color: C.muted, fontFamily: 'JetBrains Mono, monospace', letterSpacing: 0.3 }}>
             {formatEditorialDate()}
@@ -291,105 +303,203 @@ export default function BoardPage() {
         </div>
       )}
 
-      {/* ── Board ── */}
-      <div style={{
-        flex: 1, overflowX: 'auto', overflowY: 'hidden',
-        display: 'grid',
-        gridTemplateColumns: selectedFlow
-          ? `repeat(${selectedFlow.stages.length}, minmax(220px, 1fr))`
-          : '1fr',
-        gap: 12,
-        padding: isMobile ? '8px 12px 24px' : '12px 32px 32px',
-        alignItems: 'start',
-      }}>
-        {selectedFlow?.stages.map(stage => {
-          const hue = stageHueFromColor(stage.color, stage.order)
-          const glyph = getGlyph(stage.order)
-          const stageDemands = demands.filter(d => d.currentStageId === stage.id)
-          const isOver = dragOverStage === stage.id
+      {/* ── Stage tabs — mobile only ── */}
+      {isMobile && selectedFlow && selectedFlow.stages.length > 0 && (
+        <div style={{ overflowX: 'auto', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 6, padding: '8px 14px 10px', minWidth: 'max-content' }}>
+            {selectedFlow.stages.map(stage => {
+              const hue = stageHueFromColor(stage.color, stage.order)
+              const count = demands.filter(d => d.currentStageId === stage.id).length
+              const active = activeMobileStageId === stage.id
+              return (
+                <button
+                  key={stage.id}
+                  onClick={() => setActiveMobileStageId(stage.id)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 999, fontSize: 12,
+                    border: `1px solid ${active ? stageColor(hue, 'solid') : C.border}`,
+                    background: active ? stageColor(hue, 'soft') : 'transparent',
+                    color: active ? stageColor(hue, 'ink') : C.fg,
+                    fontFamily: 'inherit', fontWeight: 600, cursor: 'pointer',
+                    whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: stageColor(hue, 'solid'), flexShrink: 0 }} />
+                  {stage.name}
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10, color: C.muted, fontWeight: 700 }}>{count}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
-          return (
+      {/* ── Board — mobile: card list / desktop: kanban ── */}
+      {isMobile ? (
+        <div style={{
+          flex: 1, overflowY: 'auto',
+          padding: '12px 14px 88px',
+        }}>
+          {activeStageDemands.map(demand => (
             <div
-              key={stage.id}
-              onDragOver={e => { e.preventDefault(); setDragOverStage(stage.id) }}
-              onDragLeave={e => {
-                if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverStage(null)
-              }}
-              onDrop={() => { handleDrop(stage.id); setDragOverStage(null) }}
+              key={demand.id}
+              onClick={() => setSelectedDemand(demand)}
               style={{
-                background: isOver ? stageColor(hue, 'softer') : C.surface,
+                background: C.cardBg,
+                border: `1px solid ${C.border}`,
+                borderLeft: `3px solid ${stageColor(stageHueFromColor(demand.currentStage.color, demand.currentStage.order), 'solid')}`,
                 borderRadius: 8,
-                padding: 12,
-                display: 'flex', flexDirection: 'column', gap: 10,
-                border: `1px solid ${isOver ? stageColor(hue, 'ring') : C.border}`,
-                transition: 'background .15s, border-color .15s',
-                minHeight: 200,
+                padding: '12px 14px',
+                marginBottom: 8,
+                cursor: 'pointer',
               }}
             >
-              {/* Column header */}
-              <div style={{ padding: '4px 4px 8px', borderBottom: `1px dashed ${C.border}` }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ color: stageColor(hue, 'solid'), fontSize: 14 }}>{glyph}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: -0.2 }}>{stage.name}</span>
-                  </div>
-                  <span style={{
-                    fontFamily: 'Instrument Serif, serif',
-                    fontStyle: 'italic',
-                    fontSize: 22, lineHeight: 1,
-                    color: stageColor(hue, 'solid'),
-                  }}>
-                    {stageDemands.length}
-                  </span>
-                </div>
-
-                {/* Progress bar */}
-                <div style={{ marginTop: 6, height: 2, background: 'oklch(0.92 0.005 60)', borderRadius: 1, overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${Math.min(stageDemands.length / 3, 1) * 100}%`,
-                    background: stageColor(hue, 'solid'),
-                    transition: 'width .3s',
-                  }} />
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <span style={{
+                  fontSize: 9, fontFamily: 'JetBrains Mono, monospace',
+                  color: C.muted, letterSpacing: 0.4, fontWeight: 700, textTransform: 'uppercase',
+                }}>
+                  {demand.tag ?? 'demand'} · #{demand.id.slice(0, 6).toUpperCase()}
+                </span>
               </div>
-
-              {/* Cards */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
-                {stageDemands.map(demand => (
-                  <DemandCard
-                    key={demand.id}
-                    demand={demand}
-                    isDragging={draggingId === demand.id}
-                    onDragStart={(e, id) => { e.dataTransfer.effectAllowed = 'move'; setDraggingId(id) }}
-                    onDragEnd={() => setDraggingId(null)}
-                    onClick={() => setSelectedDemand(demand)}
-                  />
-                ))}
-
-                {stageDemands.length === 0 && (
-                  <div style={{
-                    fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
-                    color: C.muted, textAlign: 'center',
-                    padding: '24px 8px', fontStyle: 'italic',
-                  }}>
-                    silêncio constrangedor
-                  </div>
-                )}
+              <div style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.3, marginBottom: 10 }}>
+                {demand.title}
               </div>
+              {demand.assignedTo && (
+                <div style={{ fontSize: 11, color: C.muted, fontFamily: 'JetBrains Mono, monospace' }}>
+                  {demand.assignedTo.name}
+                </div>
+              )}
             </div>
-          )
-        })}
+          ))}
+          {activeStageDemands.length === 0 && (
+            <div style={{
+              padding: '48px 16px', textAlign: 'center',
+              color: C.muted, fontSize: 13, fontStyle: 'italic',
+              fontFamily: 'JetBrains Mono, monospace',
+            }}>
+              nothing here yet
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{
+          flex: 1, overflowX: 'auto', overflowY: 'hidden',
+          display: 'grid',
+          gridTemplateColumns: selectedFlow
+            ? `repeat(${selectedFlow.stages.length}, minmax(220px, 1fr))`
+            : '1fr',
+          gap: 12,
+          padding: '12px 32px 32px',
+          alignItems: 'start',
+        }}>
+          {selectedFlow?.stages.map(stage => {
+            const hue = stageHueFromColor(stage.color, stage.order)
+            const glyph = getGlyph(stage.order)
+            const stageDemands = demands.filter(d => d.currentStageId === stage.id)
+            const isOver = dragOverStage === stage.id
 
-        {(!selectedFlow || selectedFlow.stages.length === 0) && (
-          <div style={{
+            return (
+              <div
+                key={stage.id}
+                onDragOver={e => { e.preventDefault(); setDragOverStage(stage.id) }}
+                onDragLeave={e => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOverStage(null)
+                }}
+                onDrop={() => { handleDrop(stage.id); setDragOverStage(null) }}
+                style={{
+                  background: isOver ? stageColor(hue, 'softer') : C.surface,
+                  borderRadius: 8,
+                  padding: 12,
+                  display: 'flex', flexDirection: 'column', gap: 10,
+                  border: `1px solid ${isOver ? stageColor(hue, 'ring') : C.border}`,
+                  transition: 'background .15s, border-color .15s',
+                  minHeight: 200,
+                }}
+              >
+                {/* Column header */}
+                <div style={{ padding: '4px 4px 8px', borderBottom: `1px dashed ${C.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ color: stageColor(hue, 'solid'), fontSize: 14 }}>{glyph}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: -0.2 }}>{stage.name}</span>
+                    </div>
+                    <span style={{
+                      fontFamily: 'Instrument Serif, serif',
+                      fontStyle: 'italic',
+                      fontSize: 22, lineHeight: 1,
+                      color: stageColor(hue, 'solid'),
+                    }}>
+                      {stageDemands.length}
+                    </span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div style={{ marginTop: 6, height: 2, background: 'oklch(0.92 0.005 60)', borderRadius: 1, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${Math.min(stageDemands.length / 3, 1) * 100}%`,
+                      background: stageColor(hue, 'solid'),
+                      transition: 'width .3s',
+                    }} />
+                  </div>
+                </div>
+
+                {/* Cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
+                  {stageDemands.map(demand => (
+                    <DemandCard
+                      key={demand.id}
+                      demand={demand}
+                      isDragging={draggingId === demand.id}
+                      onDragStart={(e, id) => { e.dataTransfer.effectAllowed = 'move'; setDraggingId(id) }}
+                      onDragEnd={() => setDraggingId(null)}
+                      onClick={() => setSelectedDemand(demand)}
+                    />
+                  ))}
+
+                  {stageDemands.length === 0 && (
+                    <div style={{
+                      fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
+                      color: C.muted, textAlign: 'center',
+                      padding: '24px 8px', fontStyle: 'italic',
+                    }}>
+                      nothing here yet
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+
+          {(!selectedFlow || selectedFlow.stages.length === 0) && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: C.muted, fontFamily: 'JetBrains Mono, monospace', fontSize: 13,
+            }}>
+              No flow found.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── FAB — mobile only ── */}
+      {isMobile && (
+        <button
+          onClick={() => setShowNewDemand(true)}
+          style={{
+            position: 'fixed', right: 16, bottom: 24,
+            width: 52, height: 52, borderRadius: '50%',
+            background: C.fg, color: '#fff',
+            border: 'none', fontSize: 24, cursor: 'pointer',
+            boxShadow: '0 6px 20px rgba(0,0,0,.22)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: C.muted, fontFamily: 'JetBrains Mono, monospace', fontSize: 13,
-          }}>
-            Nenhum fluxo encontrado.
-          </div>
-        )}
-      </div>
+            zIndex: 50,
+          }}
+        >
+          +
+        </button>
+      )}
 
       {selectedDemand && selectedFlow && (
         <DemandModal
@@ -491,7 +601,7 @@ function FlowSelector({ flows, selectedFlow, onSelect, onNewFlow }: {
           borderRadius: 4,
         }}
       >
-        <span style={{ fontSize: 10, color: C.muted, letterSpacing: 0.6 }}>FLUXO</span>
+        <span style={{ fontSize: 10, color: C.muted, letterSpacing: 0.6 }}>FLOW</span>
         <span style={{ fontSize: 12, fontWeight: 700, color: C.fg, letterSpacing: 0.3, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {selectedFlow?.name ?? '—'}
         </span>
@@ -543,7 +653,7 @@ function FlowSelector({ flows, selectedFlow, onSelect, onNewFlow }: {
               onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
             >
               <span style={{ fontSize: 14, lineHeight: 1 }}>+</span>
-              <span>Novo fluxo</span>
+              <span>New flow</span>
             </button>
           </div>
         </div>
@@ -552,10 +662,8 @@ function FlowSelector({ flows, selectedFlow, onSelect, onNewFlow }: {
   )
 }
 
-// Inline avatar para o header — sem import extra
 function TeamAvatar({ name, index }: { name: string; index: number }) {
   const initials = name.split(' ').map(w => w[0]).slice(0, 2).join('')
-  // Simple hash for hue
   let h = 0
   for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h)
   const hue = Math.abs(h) % 360

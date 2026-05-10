@@ -62,7 +62,7 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
         const res = await api.post('/api/ai/search', { query: q.trim() })
         setAiAnswer(res.data)
       } catch {
-        setAiAnswer({ summary: 'Não consegui processar. Verifique se o Ollama está rodando.', demands: [] })
+        setAiAnswer({ summary: "Couldn't process. Check if Ollama is running.", demands: [] })
       } finally {
         setAiThinking(false)
       }
@@ -114,7 +114,7 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
             value={q}
             onChange={e => setQ(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Buscar demandas ou perguntar à IA…"
+            placeholder="Search demands or ask AI…"
             style={{
               flex: 1, border: 'none', outline: 'none', background: 'transparent',
               color: FG, fontFamily: 'inherit', fontSize: 16, fontWeight: 500,
@@ -135,7 +135,7 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
           {nlMode && aiThinking && (
             <div style={{ padding: '20px 18px', display: 'flex', alignItems: 'center', gap: 10, color: AI_COLOR }}>
               <span style={{ fontSize: 12, lineHeight: 1 }}>✦</span>
-              <span className="fd-pulse" style={{ fontSize: 13, fontStyle: 'italic' }}>pensando…</span>
+              <span className="fd-pulse" style={{ fontSize: 13, fontStyle: 'italic' }}>thinking…</span>
             </div>
           )}
 
@@ -159,7 +159,7 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
           {!nlMode && q.trim() && (
             <>
               {matches.actions.length > 0 && (
-                <Group title="Ações">
+                <Group title="Actions">
                   {matches.actions.map(a => (
                     <div key={a.id} className="fd-row" onClick={a.fn} style={{ padding: '8px 18px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13 }}>
                       <span style={{ color: MUTED, width: 20, textAlign: 'center', flexShrink: 0 }}>{a.icon}</span>
@@ -169,7 +169,7 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
                 </Group>
               )}
               {matches.demands.length > 0 && (
-                <Group title="Demandas">
+                <Group title="Demands">
                   {matches.demands.map(d => (
                     <DemandRow key={d.id} demand={d} onClick={() => { onSelectDemand(d); onClose() }} />
                   ))}
@@ -177,7 +177,7 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
               )}
               {matches.actions.length + matches.demands.length === 0 && (
                 <div style={{ padding: '24px 18px', fontSize: 13, color: MUTED, textAlign: 'center', fontStyle: 'italic' }}>
-                  nada encontrado · tente uma pergunta em linguagem natural
+                  nothing found · try a natural language question
                 </div>
               )}
             </>
@@ -190,7 +190,7 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.4,
         }}>
-          <span>perguntas em PT-BR: "demandas atrasadas", "o que tá em aprovação"</span>
+          <span>try: "overdue demands", "what's in approval", "all video"</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <kbd style={{ padding: '2px 5px', borderRadius: 2, background: 'oklch(0.94 0.005 60)', border: `1px solid ${BORDER}` }}>↵</kbd>
             <span>abrir</span>
@@ -205,17 +205,17 @@ interface Action { id: string; label: string; icon: string; fn: () => void }
 
 function ACTIONS(onNew: () => void, onEdit: () => void, onClose: () => void): Action[] {
   return [
-    { id: 'new', label: 'Abrir nova demanda', icon: '+', fn: () => { onClose(); onNew() } },
-    { id: 'flow', label: 'Editar fluxo', icon: '⇄', fn: () => { onClose(); onEdit() } },
+    { id: 'new', label: 'Open new demand', icon: '+', fn: () => { onClose(); onNew() } },
+    { id: 'flow', label: 'Edit flow', icon: '⇄', fn: () => { onClose(); onEdit() } },
   ]
 }
 
 function EmptyState() {
-  const sugg = ['demandas atrasadas', 'o que tá em aprovação', 'todas de vídeo', 'quem está com mais demandas']
+  const sugg = ['overdue demands', 'what is in approval', 'all video demands', 'who has the most demands']
   return (
     <div style={{ padding: '14px 18px' }}>
       <div style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', color: MUTED, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>
-        Pergunte algo
+        Ask something
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {sugg.map(s => (

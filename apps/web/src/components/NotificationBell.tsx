@@ -16,11 +16,11 @@ const MUTED = 'oklch(0.50 0.01 60)'
 
 function formatRelativeTime(dateStr: string): string {
   const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60_000)
-  if (mins < 1) return 'agora'
-  if (mins < 60) return `há ${mins} min`
+  if (mins < 1) return 'now'
+  if (mins < 60) return `${mins}m ago`
   const hours = Math.floor(mins / 60)
-  if (hours < 24) return `há ${hours}h`
-  return `há ${Math.floor(hours / 24)}d`
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
 }
 
 export default function NotificationBell() {
@@ -117,7 +117,7 @@ export default function NotificationBell() {
               fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
               color: MUTED, letterSpacing: 0.5, textTransform: 'uppercase',
             }}>
-              Notificações
+              Notifications
             </span>
             {count > 1 && (
               <button
@@ -128,7 +128,7 @@ export default function NotificationBell() {
                   color: MUTED, letterSpacing: 0.3,
                 }}
               >
-                marcar todas como lidas
+                mark all as read
               </button>
             )}
           </div>
@@ -138,7 +138,7 @@ export default function NotificationBell() {
               padding: '20px 16px', fontSize: 13,
               color: MUTED, fontStyle: 'italic', textAlign: 'center',
             }}>
-              Nenhuma notificação nova.
+              No new notifications.
             </div>
           ) : (
             notifications.map((n, i) => (
@@ -162,7 +162,7 @@ export default function NotificationBell() {
                 </div>
                 <button
                   onClick={() => handleMarkRead(n)}
-                  title="Marcar como lida"
+                  title="Mark as read"
                   style={{
                     background: 'none', border: `1px solid ${BORDER}`,
                     borderRadius: 4, padding: '2px 7px',

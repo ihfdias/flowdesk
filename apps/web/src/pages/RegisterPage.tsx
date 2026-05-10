@@ -39,12 +39,12 @@ export default function RegisterPage() {
   const [loading, setLoading]               = useState(false)
   const [focused, setFocused]               = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault()
     setError('')
 
     if (password !== confirmPassword) {
-      setError('As senhas não coincidem.')
+      setError("Passwords don't match.")
       return
     }
 
@@ -55,7 +55,7 @@ export default function RegisterPage() {
       navigate('/board')
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
-      setError(msg ?? 'Erro ao criar conta.')
+      setError(msg ?? "Couldn't create account.")
     } finally {
       setLoading(false)
     }
@@ -152,7 +152,7 @@ export default function RegisterPage() {
             color: C.muted, letterSpacing: 0.6,
             textTransform: 'uppercase', marginBottom: 8,
           }}>
-            Primeira vez por aqui
+            First time here
           </div>
 
           <h2 style={{
@@ -162,19 +162,19 @@ export default function RegisterPage() {
             letterSpacing: -1, lineHeight: 1.05,
             fontStyle: 'italic',
           }}>
-            Criar conta.
+            Create account.
           </h2>
 
           <form onSubmit={handleSubmit} style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* Nome */}
             <label style={{ display: 'block' }}>
-              <div style={{ marginBottom: 6 }}>{fieldLabel('Nome')}</div>
+              <div style={{ marginBottom: 6 }}>{fieldLabel('Name')}</div>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="Marina Silva"
+                placeholder="Alex Silva"
                 required
                 minLength={2}
                 style={inputStyle('name')}
@@ -200,12 +200,12 @@ export default function RegisterPage() {
 
             {/* Senha */}
             <label style={{ display: 'block' }}>
-              <div style={{ marginBottom: 6 }}>{fieldLabel('Senha')}</div>
+              <div style={{ marginBottom: 6 }}>{fieldLabel('Password')}</div>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
+                placeholder="At least 6 characters"
                 required
                 minLength={6}
                 style={inputStyle('password')}
@@ -216,7 +216,7 @@ export default function RegisterPage() {
 
             {/* Confirmar senha */}
             <label style={{ display: 'block' }}>
-              <div style={{ marginBottom: 6 }}>{fieldLabel('Confirmar senha')}</div>
+              <div style={{ marginBottom: 6 }}>{fieldLabel('Confirm password')}</div>
               <input
                 type="password"
                 value={confirmPassword}
@@ -251,12 +251,12 @@ export default function RegisterPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              {loading ? 'criando conta…' : 'Criar conta →'}
+              {loading ? 'creating account…' : 'Create account →'}
             </button>
           </form>
 
           <div style={{ marginTop: 28, fontSize: 12, color: C.muted, textAlign: 'center' }}>
-            Já tem uma conta?{' '}
+            Already have an account?{' '}
             <button
               onClick={() => navigate('/login')}
               style={{
@@ -265,7 +265,7 @@ export default function RegisterPage() {
                 fontFamily: 'inherit', padding: 0,
               }}
             >
-              Entrar →
+              Sign in →
             </button>
           </div>
         </div>

@@ -107,14 +107,14 @@ export default function FlowEditorPage() {
     setSaveStatus('saving')
     try {
       const res = await api.post(`/api/flows/${flow.id}/stages`, {
-        name: 'Nova etapa',
+        name: 'New stage',
         color: 'orange',
         order: newOrder,
       })
       const newStage: Stage = res.data
       setStages(prev => [...prev, newStage])
       setEditingId(newStage.id)
-      setEditingName('Nova etapa')
+      setEditingName('New stage')
       markSaved()
     } catch {
       setSaveStatus('error')
@@ -175,7 +175,7 @@ export default function FlowEditorPage() {
 
   if (loading) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: BG }}>
-      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: MUTED }}>carregando...</span>
+      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: MUTED }}>loading...</span>
     </div>
   )
 
@@ -217,15 +217,15 @@ export default function FlowEditorPage() {
           onMouseEnter={e => (e.currentTarget.style.color = FG)}
           onMouseLeave={e => (e.currentTarget.style.color = MUTED)}
         >
-          ← Voltar ao board
+          ← Back to board
         </button>
 
         <div style={{ flex: 1 }} />
 
         <div style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', letterSpacing: 0.4, minWidth: 90, textAlign: 'right' }}>
-          {saveStatus === 'saving' && <span style={{ color: MUTED }}>salvando…</span>}
-          {saveStatus === 'saved' && <span style={{ color: 'oklch(0.48 0.14 145)' }}>✓ salvo</span>}
-          {saveStatus === 'error' && <span style={{ color: 'oklch(0.55 0.18 28)' }}>! erro</span>}
+          {saveStatus === 'saving' && <span style={{ color: MUTED }}>saving…</span>}
+          {saveStatus === 'saved' && <span style={{ color: 'oklch(0.48 0.14 145)' }}>✓ saved</span>}
+          {saveStatus === 'error' && <span style={{ color: 'oklch(0.55 0.18 28)' }}>! error</span>}
         </div>
       </header>
 
@@ -239,7 +239,7 @@ export default function FlowEditorPage() {
             color: MUTED, letterSpacing: 0.5, textTransform: 'uppercase',
             marginBottom: 8,
           }}>
-            Nome do fluxo
+            Flow name
           </div>
           <input
             value={flowName}
@@ -266,7 +266,7 @@ export default function FlowEditorPage() {
           color: MUTED, letterSpacing: 0.5, textTransform: 'uppercase',
           marginBottom: 12,
         }}>
-          Etapas — {stages.length}
+          Stages — {stages.length}
         </div>
 
         {/* Stage rows */}
@@ -361,7 +361,7 @@ export default function FlowEditorPage() {
                       fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
                       color: MUTED, letterSpacing: 0.4, marginTop: 2,
                     }}>
-                      etapa · nº {String(idx + 1).padStart(2, '0')}
+                      stage · #{String(idx + 1).padStart(2, '0')}
                     </div>
                   </div>
 
@@ -403,7 +403,7 @@ export default function FlowEditorPage() {
                         fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
                         color: 'oklch(0.55 0.18 28)',
                       }}>
-                        tem demandas
+                        has demands
                       </span>
                     )}
                     <button
@@ -434,7 +434,7 @@ export default function FlowEditorPage() {
                         }
                       }}
                     >
-                      {isConfirmingDelete ? 'confirmar?' : '×'}
+                      {isConfirmingDelete ? 'confirm?' : '×'}
                     </button>
                   </div>
                 </div>
@@ -475,7 +475,7 @@ export default function FlowEditorPage() {
           }}
         >
           <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
-          Adicionar etapa
+          Add stage
         </button>
 
         {/* Danger zone */}
@@ -489,7 +489,7 @@ export default function FlowEditorPage() {
             color: 'oklch(0.55 0.22 15)', letterSpacing: 0.5,
             textTransform: 'uppercase', marginBottom: 12,
           }}>
-            Zona de perigo
+            Danger zone
           </div>
 
           {!confirmDeleteFlow ? (
@@ -513,12 +513,12 @@ export default function FlowEditorPage() {
                 e.currentTarget.style.borderColor = 'oklch(0.80 0.08 15)'
               }}
             >
-              Deletar fluxo
+              Delete flow
             </button>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <p style={{ fontSize: 13, color: FG, margin: 0 }}>
-                Tem certeza? <strong>Todas as demandas serão perdidas</strong> e esta ação não pode ser desfeita.
+                Are you sure? <strong>All demands will be lost</strong> and this action cannot be undone.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
@@ -532,8 +532,8 @@ export default function FlowEditorPage() {
                       setConfirmDeleteFlow(false)
                       const status = (err as { response?: { status?: number } })?.response?.status
                       const msg = status === 403
-                        ? 'Você não tem permissão para deletar este fluxo. Apenas o criador pode fazer isso.'
-                        : 'Erro ao deletar o fluxo. Tente novamente.'
+                        ? 'Not authorized to delete this flow. Only the creator can do that.'
+                        : 'Error deleting flow. Try again.'
                       setDeleteFlowError(msg)
                       setTimeout(() => setDeleteFlowError(null), 4000)
                     }
@@ -547,7 +547,7 @@ export default function FlowEditorPage() {
                     opacity: deletingFlow ? 0.6 : 1,
                   }}
                 >
-                  {deletingFlow ? 'Deletando…' : 'Confirmar exclusão'}
+                  {deletingFlow ? 'Deleting…' : 'Confirm deletion'}
                 </button>
                 <button
                   onClick={() => { setConfirmDeleteFlow(false); setDeleteFlowError(null) }}
@@ -560,7 +560,7 @@ export default function FlowEditorPage() {
                     fontSize: 13, color: MUTED, fontFamily: 'inherit',
                   }}
                 >
-                  Cancelar
+                  Cancel
                 </button>
               </div>
             </div>

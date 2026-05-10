@@ -48,7 +48,7 @@ export default function LoginPage() {
       login(data.token, data.user)
       navigate('/board')
     } catch (err: any) {
-      setError(err.response?.data?.error ?? 'Erro ao fazer login')
+      setError(err.response?.data?.error ?? 'Login failed')
     } finally {
       setLoading(false)
     }
@@ -139,7 +139,7 @@ export default function LoginPage() {
             color: C.muted, letterSpacing: 0.6,
             textTransform: 'uppercase', marginBottom: 8,
           }}>
-            Que bom que você voltou
+            Welcome back.
           </div>
 
           <h2 style={{
@@ -149,7 +149,7 @@ export default function LoginPage() {
             letterSpacing: -1, lineHeight: 1.05,
             fontStyle: 'italic',
           }}>
-            Entrar.
+            Sign in.
           </h2>
 
           <form onSubmit={handleSubmit} style={{ marginTop: 32, display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -180,8 +180,8 @@ export default function LoginPage() {
             {/* Senha */}
             <label style={{ display: 'block' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.muted, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 600 }}>Senha</span>
-                <a href="#" onClick={e => e.preventDefault()} style={{ color: C.muted, fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textDecoration: 'none' }}>esqueci</a>
+                <span style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: C.muted, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: 600 }}>Password</span>
+                <a href="#" onClick={e => e.preventDefault()} style={{ color: C.muted, fontSize: 11, fontFamily: 'JetBrains Mono, monospace', textDecoration: 'none' }}>forgot</a>
               </div>
               <input
                 type="password"
@@ -218,7 +218,7 @@ export default function LoginPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}
             >
-              {loading ? 'conferindo…' : 'Entrar →'}
+              {loading ? 'signing in…' : 'Sign in →'}
             </button>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0' }}>
@@ -234,12 +234,12 @@ export default function LoginPage() {
               fontFamily: 'inherit', fontSize: 13, fontWeight: 500,
               cursor: 'pointer',
             }}>
-              Continuar com Google
+              Continue with Google
             </button>
           </form>
 
           <div style={{ marginTop: 28, fontSize: 12, color: C.muted, textAlign: 'center' }}>
-            Primeira vez por aqui?{' '}
+            First time here?{' '}
             <button
               onClick={() => navigate('/register')}
               style={{
@@ -248,7 +248,7 @@ export default function LoginPage() {
                 fontFamily: 'inherit', padding: 0,
               }}
             >
-              Crie sua conta →
+              Create your account →
             </button>
           </div>
         </div>

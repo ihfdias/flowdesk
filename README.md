@@ -215,3 +215,100 @@ Este projeto foi construído do zero como estudo prático de desenvolvimento ful
 ---
 
 *Projeto desenvolvido como estudo de desenvolvimento full stack — parte do portfólio pessoal.*
+
+---
+---
+
+# FlowDesk — English
+
+> Manage your team's demands with fully customizable workflows.
+
+---
+
+## 🔗 Links
+
+- **Demo:** [flowdesk-web-swart.vercel.app/login](https://flowdesk-web-swart.vercel.app/login)
+- **Repository:** [github.com/ihfdias/flowdesk](https://github.com/ihfdias/flowdesk)
+
+---
+
+## The problem
+
+Marketing teams juggle dozens of simultaneous demands — posts, campaigns, briefs, approvals — scattered across spreadsheets, WhatsApp groups and emails. There's no visibility into progress, no clear ownership, and no traceability of when or why something changed status.
+
+FlowDesk solves this with a kanban board where **each team defines its own stages**, tracks progress in real time, and has a full history of every move.
+
+---
+
+## Features
+
+- **Full authentication** — registration, JWT login and protected routes
+- **Guided onboarding** — new users create their first flow in 3 steps
+- **Customizable flows** — create stages with name, color and order defined by you
+- **Kanban board** — drag demands between stages with drag-and-drop
+- **Rich demands** — title, description, tag, priority, assignee and due date
+- **Move history** — every advance records who moved it, when, and with what comment
+- **Stage comments** — each comment is linked to the stage it was made in
+- **Team management** — invite members by email; members can see and interact with flow demands
+- **Real-time notifications** — polling every 30s; invites generate a notification with direct board link
+- **Command Palette (⌘K)** — search demands by title/tag or query in natural language via local AI (Ollama)
+- **Demand archiving** — completing the last stage archives the demand and removes it from the board
+- **Permissions** — only the flow creator can edit stages, invite members, or delete the flow
+
+---
+
+## Stack
+
+### Backend
+Node.js · Express 5 · TypeScript · Prisma 7 · PostgreSQL · Zod
+
+### Frontend
+React 19 · Vite · TypeScript · React Router 7
+
+### Other
+Ollama (llama3.2) · JWT
+
+---
+
+## Local setup
+
+```bash
+git clone https://github.com/ihfdias/flowdesk.git
+cd flowdesk
+npm install
+```
+
+Create `apps/api/.env`:
+
+```env
+DATABASE_URL="postgresql://user:password@localhost:5432/flowdesk"
+JWT_SECRET="your-secret-key"
+PORT=3333
+OLLAMA_URL="http://localhost:11434"
+```
+
+Run migrations:
+
+```bash
+cd apps/api
+npx prisma migrate dev
+npx prisma generate
+```
+
+Start servers (two terminals):
+
+```bash
+# Terminal 1 — API (port 3333)
+cd apps/api && npm run dev
+
+# Terminal 2 — Web (port 5173)
+cd apps/web && npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173).
+
+---
+
+## Author
+
+**Igor Dias** — [ihfdias.dev@gmail.com](mailto:ihfdias.dev@gmail.com)

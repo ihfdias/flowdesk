@@ -24,10 +24,10 @@ export async function createDemand({ title, description, tag, priority, flowId, 
     include: { stages: { orderBy: { order: 'asc' } } }
   })
   if (!flow) {
-    throw new Error('Fluxo não encontrado')
+    throw new Error('Flow not found')
   }
   if (flow.stages.length === 0) {
-    throw new Error('O fluxo não tem etapas cadastradas')
+    throw new Error('Flow has no stages')
   }
 
   const firstStage = flow.stages[0]
@@ -105,7 +105,7 @@ export async function getDemandById(id: string, userId: string) {
     }
   })
   if (!demand) {
-    throw new Error('Demanda não encontrada')
+    throw new Error('Demand not found')
   }
   return demand
 }
@@ -124,14 +124,14 @@ export async function advanceDemand(demandId: string, movedById: string, comment
     include: { flow: { include: { stages: { orderBy: { order: 'asc' } } } } }
   })
   if (!demand) {
-    throw new Error('Demanda não encontrada')
+    throw new Error('Demand not found')
   }
 
   const stages = demand.flow.stages
   const currentIndex = stages.findIndex(s => s.id === demand.currentStageId)
 
   if (currentIndex === stages.length - 1) {
-    throw new Error('A demanda já está na última etapa do fluxo')
+    throw new Error('Demand is already at the last stage')
   }
 
   const nextStage = stages[currentIndex + 1]
@@ -168,7 +168,7 @@ export async function createComment(demandId: string, content: string, authorId:
     },
     select: { currentStageId: true },
   })
-  if (!demand) throw new Error('Demanda não encontrada')
+  if (!demand) throw new Error('Demand not found')
   return prisma.comment.create({
     data: { demandId, content, authorId, stageId: demand.currentStageId },
     include: {
@@ -190,7 +190,7 @@ export async function archiveDemand(demandId: string, userId: string) {
       },
     },
   })
-  if (!demand) throw new Error('Demanda não encontrada')
+  if (!demand) throw new Error('Demand not found')
   return prisma.demand.update({ where: { id: demandId }, data: { archived: true } })
 }
 
@@ -207,15 +207,15 @@ export async function moveDemand({ demandId, toStageId, movedById, comment }: Mo
     },
   })
   if (!demand) {
-    throw new Error('Demanda não encontrada')
+    throw new Error('Demand not found')
   }
 
   const targetStage = await prisma.stage.findUnique({ where: { id: toStageId } })
   if (!targetStage || targetStage.flowId !== demand.flowId) {
-    throw new Error('Etapa não pertence ao fluxo desta demanda')
+    throw new Error('Stage does not belong to this flow')
   }
   if (demand.currentStageId === toStageId) {
-    throw new Error('A demanda já está nesta etapa')
+    throw new Error('Demand is already at this stage')
   }
 
   const [updated] = await prisma.$transaction([

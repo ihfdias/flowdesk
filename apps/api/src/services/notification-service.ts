@@ -14,7 +14,7 @@ export async function listUnread(userId: string) {
 export async function markAsRead(id: string, userId: string) {
   const notification = await prisma.notification.findUnique({ where: { id } })
   if (!notification || notification.userId !== userId) {
-    throw new Error('Notificação não encontrada')
+    throw new Error('Notification not found')
   }
   await prisma.notification.update({ where: { id }, data: { read: true } })
 }
