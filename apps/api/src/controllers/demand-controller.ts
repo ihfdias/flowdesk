@@ -6,7 +6,7 @@ const createDemandSchema = z.object({
   title: z.string().min(2),
   description: z.string().optional(),
   tag: z.string().optional(),
-  priority: z.enum(['baixa', 'média', 'alta']).optional(),
+  priority: z.enum(['low', 'medium', 'high']).optional(),
   flowId: z.string(),
   assignedToId: z.string().optional(),
   dueDate: z.coerce.date().optional()
@@ -26,14 +26,14 @@ const commentSchema = z.object({
 })
 
 function handleError(res: Response, err: unknown): void {
-  const message = err instanceof Error ? err.message : 'Erro interno'
-  if (message === 'Demanda não encontrada' || message === 'Fluxo não encontrado') {
+  const message = err instanceof Error ? err.message : 'Internal error'
+  if (message === 'Demand not found' || message === 'Flow not found') {
     res.status(404).json({ error: message })
-  } else if (message === 'O fluxo não tem etapas cadastradas') {
+  } else if (message === 'Flow has no stages') {
     res.status(422).json({ error: message })
-  } else if (message === 'A demanda já está na última etapa do fluxo' || message === 'A demanda já está nesta etapa') {
+  } else if (message === 'Demand is already at the last stage' || message === 'Demand is already at this stage') {
     res.status(409).json({ error: message })
-  } else if (message === 'Etapa não pertence ao fluxo desta demanda') {
+  } else if (message === 'Stage does not belong to this flow') {
     res.status(400).json({ error: message })
   } else {
     res.status(500).json({ error: message })
