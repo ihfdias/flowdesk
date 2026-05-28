@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import api from '../../lib/api'
 import { Flow, User } from '../../lib/types'
 import { useIsMobile } from '../../lib/useIsMobile'
+import Spinner from '../primitives/Spinner'
 
 interface Props {
   flow: Flow
@@ -315,6 +316,7 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
                 transition: 'background .15s',
               }}
             >
+              {loading && <Spinner size={13} />}
               {loading ? 'Creating…' : 'Create demand'}
             </button>
           </div>

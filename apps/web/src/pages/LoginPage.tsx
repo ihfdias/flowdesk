@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import api from '../lib/api'
 import { useIsMobile } from '../lib/useIsMobile'
+import Spinner from '../components/primitives/Spinner'
 
 const STAGES = [
   { id: 's1', name: 'Briefing', hue: 28 },
@@ -218,6 +219,7 @@ export default function LoginPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}
             >
+              {loading && <Spinner size={13} />}
               {loading ? 'signing in…' : 'Sign in →'}
             </button>
 

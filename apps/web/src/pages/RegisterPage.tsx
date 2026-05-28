@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import api from '../lib/api'
+import Spinner from '../components/primitives/Spinner'
 
 const STAGES = [
   { id: 's1', name: 'Briefing',  hue: 28  },
@@ -251,6 +252,7 @@ export default function RegisterPage() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
+              {loading && <Spinner size={13} color={C.bg} />}
               {loading ? 'creating account…' : 'Create account →'}
             </button>
           </form>

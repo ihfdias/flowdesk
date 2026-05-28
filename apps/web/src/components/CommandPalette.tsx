@@ -134,8 +134,19 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
 
           {nlMode && aiThinking && (
             <div style={{ padding: '20px 18px', display: 'flex', alignItems: 'center', gap: 10, color: AI_COLOR }}>
+              <style>{`
+                @keyframes fdDot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+                .fd-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;animation:fdDot 1.2s ease-in-out infinite}
+                .fd-dot:nth-child(2){animation-delay:.15s}
+                .fd-dot:nth-child(3){animation-delay:.3s}
+              `}</style>
               <span style={{ fontSize: 12, lineHeight: 1 }}>✦</span>
-              <span className="fd-pulse" style={{ fontSize: 13, fontStyle: 'italic' }}>thinking…</span>
+              <span style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', letterSpacing: 0.4, fontWeight: 700, textTransform: 'uppercase' }}>thinking</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span className="fd-dot" />
+                <span className="fd-dot" />
+                <span className="fd-dot" />
+              </span>
             </div>
           )}
 

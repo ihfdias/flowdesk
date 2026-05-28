@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../lib/api'
 import { useAuth } from '../lib/auth'
@@ -48,6 +48,11 @@ export default function BoardPage() {
   const [selectedFlow, setSelectedFlow] = useState<Flow | null>(null)
   const [demands, setDemands] = useState<Demand[]>([])
   const [loading, setLoading] = useState(true)
+  const [demandsLoading, setDemandsLoading] = useState(false)
+  const [lastMovedId, setLastMovedId] = useState<string | null>(null)
+  const [confettiActive, setConfettiActive] = useState(false)
+  const [confettiHue, setConfettiHue] = useState(145)
+  const [dismissedBannerIds, setDismissedBannerIds] = useState<Set<string>>(new Set())
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverStage, setDragOverStage] = useState<string | null>(null)
   const [selectedDemand, setSelectedDemand] = useState<Demand | null>(null)
@@ -92,7 +97,10 @@ export default function BoardPage() {
 
   useEffect(() => {
     if (!selectedFlow) { setMembers([]); return }
-    api.get(`/api/demands?flowId=${selectedFlow.id}`).then(res => setDemands(res.data))
+    setDemandsLoading(true)
+    api.get(`/api/demands?flowId=${selectedFlow.id}`)
+      .then(res => setDemands(res.data))
+      .finally(() => setDemandsLoading(false))
     api.get(`/api/flows/${selectedFlow.id}/members`).then(res => setMembers(res.data.map((m: { user: User }) => m.user)))
     if (selectedFlow.stages.length > 0) {
       setActiveMobileStageId(prev => {
@@ -120,6 +128,20 @@ export default function BoardPage() {
       d.id === draggingId ? { ...d, currentStageId: stageId, currentStage: nextStage } : d
     ))
 
+    // arrival animation
+    const movedId = draggingId
+    setLastMovedId(movedId)
+    setTimeout(() => setLastMovedId(prev => prev === movedId ? null : prev), 1200)
+
+    // confetti when reaching last stage
+    const lastStage = selectedFlow.stages[selectedFlow.stages.length - 1]
+    if (stageId === lastStage?.id) {
+      const hue = stageHueFromColor(lastStage.color, lastStage.order)
+      setConfettiHue(hue)
+      setConfettiActive(true)
+      setTimeout(() => setConfettiActive(false), 2700)
+    }
+
     try {
       await api.patch(`/api/demands/${draggingId}/move`, { toStageId: stageId })
     } catch {
@@ -134,15 +156,44 @@ export default function BoardPage() {
     setTimeout(() => setToast(null), 2500)
   }, [])
 
+  const blockerDemand = useMemo(() => {
+    if (!selectedFlow || demandsLoading || demands.length === 0 || selectedFlow.stages.length < 2) return null
+    const firstId = selectedFlow.stages[0].id
+    const lastId = selectedFlow.stages[selectedFlow.stages.length - 1].id
+    const now = Date.now()
+    const candidates = demands
+      .filter(d => d.currentStageId !== firstId && d.currentStageId !== lastId && !dismissedBannerIds.has(d.id))
+      .map(d => ({ demand: d, daysOld: Math.floor((now - new Date(d.createdAt).getTime()) / 86400000) }))
+      .filter(c => c.daysOld >= 4)
+      .sort((a, b) => b.daysOld - a.daysOld)
+    return candidates[0] ?? null
+  }, [demands, selectedFlow, demandsLoading, dismissedBannerIds])
+
   const handleAdvance = useCallback(async (demandId: string) => {
+    // capture pre-advance position to detect last-stage arrival
+    const demand = demands.find(d => d.id === demandId)
+    const willReachLastStage = demand && selectedFlow &&
+      selectedFlow.stages.findIndex(s => s.id === demand.currentStageId) === selectedFlow.stages.length - 2
+
     try {
       await api.patch(`/api/demands/${demandId}/advance`, {})
       await reloadDemands()
+
+      setLastMovedId(demandId)
+      setTimeout(() => setLastMovedId(prev => prev === demandId ? null : prev), 1200)
+
+      if (willReachLastStage && selectedFlow) {
+        const lastStage = selectedFlow.stages[selectedFlow.stages.length - 1]
+        setConfettiHue(stageHueFromColor(lastStage.color, lastStage.order))
+        setConfettiActive(true)
+        setTimeout(() => setConfettiActive(false), 2700)
+      }
+
       setSelectedDemand(null)
     } catch {
       showToast('Error advancing demand. Try again.')
     }
-  }, [reloadDemands, showToast])
+  }, [reloadDemands, showToast, demands, selectedFlow])
 
   const handleArchive = useCallback(async (demandId: string) => {
     try {
@@ -159,11 +210,7 @@ export default function BoardPage() {
     ? demands.filter(d => d.currentStageId === activeMobileStageId)
     : []
 
-  if (loading) return (
-    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
-      <span style={{ fontFamily: 'JetBrains Mono, monospace', color: C.muted }}>loading...</span>
-    </div>
-  )
+  if (loading) return <BoardSkeleton />
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: C.bg, color: C.fg, fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -301,6 +348,16 @@ export default function BoardPage() {
             {formatEditorialDate()}
           </div>
         </div>
+      )}
+
+      {/* ── AI blocker banner — desktop only ── */}
+      {!isMobile && blockerDemand && (
+        <AIBlockerBanner
+          demand={blockerDemand.demand}
+          daysOld={blockerDemand.daysOld}
+          onView={() => setSelectedDemand(blockerDemand.demand)}
+          onDismiss={() => setDismissedBannerIds(prev => new Set([...prev, blockerDemand.demand.id]))}
+        />
       )}
 
       {/* ── Stage tabs — mobile only ── */}
@@ -447,25 +504,35 @@ export default function BoardPage() {
 
                 {/* Cards */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto' }}>
-                  {stageDemands.map(demand => (
-                    <DemandCard
-                      key={demand.id}
-                      demand={demand}
-                      isDragging={draggingId === demand.id}
-                      onDragStart={(e, id) => { e.dataTransfer.effectAllowed = 'move'; setDraggingId(id) }}
-                      onDragEnd={() => setDraggingId(null)}
-                      onClick={() => setSelectedDemand(demand)}
-                    />
-                  ))}
+                  {demandsLoading ? (
+                    <>
+                      <SkeletonCard />
+                      <SkeletonCard />
+                    </>
+                  ) : (
+                    <>
+                      {stageDemands.map(demand => (
+                        <DemandCard
+                          key={demand.id}
+                          demand={demand}
+                          isDragging={draggingId === demand.id}
+                          justArrived={lastMovedId === demand.id}
+                          onDragStart={(e, id) => { e.dataTransfer.effectAllowed = 'move'; setDraggingId(id) }}
+                          onDragEnd={() => setDraggingId(null)}
+                          onClick={() => setSelectedDemand(demand)}
+                        />
+                      ))}
 
-                  {stageDemands.length === 0 && (
-                    <div style={{
-                      fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
-                      color: C.muted, textAlign: 'center',
-                      padding: '24px 8px', fontStyle: 'italic',
-                    }}>
-                      nothing here yet
-                    </div>
+                      {stageDemands.length === 0 && (
+                        <div style={{
+                          fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
+                          color: C.muted, textAlign: 'center',
+                          padding: '24px 8px', fontStyle: 'italic',
+                        }}>
+                          nothing here yet
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -554,6 +621,8 @@ export default function BoardPage() {
           onOpenNewDemand={() => setShowNewDemand(true)}
         />
       )}
+
+      {confettiActive && <ConfettiOverlay hue={confettiHue} />}
 
       {toast && (
         <div style={{
@@ -683,6 +752,179 @@ function TeamAvatar({ name, index }: { name: string; index: number }) {
       }}
     >
       {initials.toUpperCase()}
+    </div>
+  )
+}
+
+// ─── Confetti overlay ────────────────────────────────────────────────────────
+
+const CONFETTI_GLYPHS = ['✺', '◇', '◈', '●', '◐']
+
+function ConfettiOverlay({ hue }: { hue: number }) {
+  const solidColor = stageColor(hue, 'solid')
+  const particles = useMemo(() =>
+    Array.from({ length: 32 }, (_, i) => ({
+      id: i,
+      glyph: CONFETTI_GLYPHS[i % CONFETTI_GLYPHS.length],
+      left: `${4 + (i * 3.07) % 92}%`,
+      delay: `${(i * 0.083) % 0.85}s`,
+      duration: `${1.8 + (i * 0.043) % 0.9}s`,
+      size: 11 + (i * 7) % 14,
+    })),
+  [])
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 300 }}>
+      <style>{`@keyframes fdFall{0%{transform:translateY(-40px) rotate(0deg);opacity:1}80%{opacity:1}100%{transform:translateY(100vh) rotate(600deg);opacity:0}}`}</style>
+      {particles.map(p => (
+        <span key={p.id} style={{
+          position: 'absolute', top: 0, left: p.left,
+          fontFamily: 'Instrument Serif, serif', fontStyle: 'italic',
+          fontSize: p.size, color: solidColor,
+          animation: `fdFall ${p.duration} ${p.delay} cubic-bezier(.3,.7,.4,1) forwards`,
+          userSelect: 'none',
+        }}>
+          {p.glyph}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+// ─── AI blocker banner ────────────────────────────────────────────────────────
+
+function AIBlockerBanner({ demand, daysOld, onView, onDismiss }: {
+  demand: Demand
+  daysOld: number
+  onView: () => void
+  onDismiss: () => void
+}) {
+  return (
+    <div style={{ padding: '0 32px 12px', flexShrink: 0 }}>
+      <div style={{
+        background: 'oklch(0.97 0.03 280)',
+        border: '1px solid oklch(0.85 0.04 280)',
+        borderRadius: 8, padding: '10px 14px',
+        display: 'flex', alignItems: 'center', gap: 12,
+        animation: 'ndIn .2s cubic-bezier(.2,.7,.3,1)',
+      }}>
+        <span style={{ color: 'oklch(0.55 0.20 280)', fontSize: 14, flexShrink: 0 }}>✦</span>
+        <span style={{
+          fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
+          letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase',
+          color: 'oklch(0.55 0.20 280)', flexShrink: 0,
+        }}>
+          FlowDesk AI
+        </span>
+        <span style={{ width: 1, height: 14, background: 'oklch(0.85 0.04 280)', flexShrink: 0 }} />
+        <span style={{ fontSize: 13, lineHeight: 1.4, color: 'oklch(0.28 0.10 280)', flex: 1 }}>
+          <strong>"{demand.title}"</strong> has been in{' '}
+          <strong>{demand.currentStage.name}</strong> for{' '}
+          <strong>{daysOld} day{daysOld !== 1 ? 's' : ''}</strong>
+          {demand.assignedTo ? ` — is ${demand.assignedTo.name} overloaded?` : '.'}
+        </span>
+        <button onClick={onView} style={{
+          background: 'oklch(0.55 0.20 280)', color: '#fff', border: 'none',
+          padding: '5px 11px', borderRadius: 4, fontSize: 11, fontWeight: 600,
+          cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+        }}>View demand</button>
+        <button onClick={onDismiss} style={{
+          background: 'transparent', border: 'none',
+          color: 'oklch(0.45 0.08 280)', cursor: 'pointer',
+          padding: '0 4px', fontSize: 20, lineHeight: 1,
+        }}>×</button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Skeleton / loading states ────────────────────────────────────────────────
+
+const SHIMMER_STYLE: React.CSSProperties = {
+  background: 'linear-gradient(90deg, oklch(0.92 0 0) 25%, oklch(0.87 0 0) 50%, oklch(0.92 0 0) 75%)',
+  backgroundSize: '400% 100%',
+  animation: 'fdShimmer 1.4s ease-in-out infinite',
+  borderRadius: 4,
+}
+
+function Skel({ w, h, style }: { w: string | number; h: number; style?: React.CSSProperties }) {
+  return <div style={{ width: w, height: h, ...SHIMMER_STYLE, ...style }} />
+}
+
+function SkeletonCard() {
+  return (
+    <div style={{
+      background: 'oklch(1 0 0)', border: '1px solid oklch(0.90 0.005 60)',
+      borderLeft: '3px solid oklch(0.90 0.005 60)',
+      borderRadius: 6, padding: '10px 12px',
+      display: 'flex', flexDirection: 'column', gap: 8,
+    }}>
+      <style>{`@keyframes fdShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Skel w={8} h={8} style={{ borderRadius: '50%' }} />
+        <Skel w={44} h={16} />
+        <div style={{ flex: 1 }} />
+        <Skel w={36} h={12} />
+      </div>
+      <Skel w="100%" h={13} />
+      <Skel w="72%" h={13} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+        <Skel w={20} h={20} style={{ borderRadius: '50%' }} />
+        <Skel w={60} h={10} />
+      </div>
+    </div>
+  )
+}
+
+function SkeletonColumn() {
+  return (
+    <div style={{
+      background: 'oklch(0.97 0.005 80)', borderRadius: 8, padding: 12,
+      display: 'flex', flexDirection: 'column', gap: 10,
+      border: '1px solid oklch(0.90 0.005 60)', minHeight: 200,
+    }}>
+      <div style={{ padding: '4px 4px 8px', borderBottom: '1px dashed oklch(0.90 0.005 60)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Skel w={14} h={14} style={{ borderRadius: '50%' }} />
+            <Skel w={80} h={13} />
+          </div>
+          <Skel w={20} h={22} />
+        </div>
+        <Skel w="100%" h={2} />
+      </div>
+      <SkeletonCard />
+      <SkeletonCard />
+    </div>
+  )
+}
+
+function BoardSkeleton() {
+  return (
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: C.bg }}>
+      {/* header ghost */}
+      <div style={{ padding: '20px 32px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0 }}>
+        <div style={{ fontFamily: 'Instrument Serif, serif', fontSize: 28, fontWeight: 400, fontStyle: 'italic', letterSpacing: -0.8 }}>
+          FlowDesk<span style={{ color: 'oklch(0.62 0.20 28)' }}>.</span>
+        </div>
+        <Skel w={140} h={20} />
+        <div style={{ flex: 1 }} />
+        <Skel w={60} h={28} />
+        <Skel w={60} h={28} />
+        <Skel w={90} h={32} />
+      </div>
+      {/* mantra ghost */}
+      <div style={{ padding: '24px 32px 16px', flexShrink: 0 }}>
+        <Skel w={280} h={42} />
+      </div>
+      {/* columns */}
+      <div style={{
+        flex: 1, display: 'grid',
+        gridTemplateColumns: 'repeat(5, minmax(220px, 1fr))',
+        gap: 12, padding: '12px 32px 32px', overflowX: 'auto',
+      }}>
+        {[0,1,2,3,4].map(i => <SkeletonColumn key={i} />)}
+      </div>
     </div>
   )
 }
