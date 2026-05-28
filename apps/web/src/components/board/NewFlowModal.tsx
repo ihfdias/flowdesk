@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import api from '../../lib/api'
 import { Flow } from '../../lib/types'
+import { useFocusTrap } from '../../lib/useFocusTrap'
 
 interface Props {
   onClose: () => void
@@ -13,6 +14,9 @@ const MUTED = 'oklch(0.50 0.01 60)'
 const ACCENT = 'oklch(0.62 0.20 28)'
 
 export default function NewFlowModal({ onClose, onCreated }: Props) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(dialogRef, onClose)
+
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [loading, setLoading] = useState(false)
@@ -46,6 +50,10 @@ export default function NewFlowModal({ onClose, onCreated }: Props) {
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-flow-title"
         onClick={e => e.stopPropagation()}
         style={{
           width: 480, background: 'oklch(1 0 0)',
@@ -66,12 +74,13 @@ export default function NewFlowModal({ onClose, onCreated }: Props) {
             </span>
             <button
               onClick={onClose}
+              aria-label="Close"
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: MUTED, lineHeight: 1, padding: '0 2px' }}
             >
               ×
             </button>
           </div>
-          <h2 style={{
+          <h2 id="new-flow-title" style={{
             margin: 0,
             fontFamily: 'Instrument Serif, serif',
             fontSize: 28, fontWeight: 400, fontStyle: 'italic',

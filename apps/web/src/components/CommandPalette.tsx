@@ -94,6 +94,9 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
         .fd-row:hover{background:oklch(0.96 0.005 60)}
       `}</style>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Search"
         onClick={e => e.stopPropagation()}
         style={{
           width: 600, maxHeight: '70vh', background: 'oklch(1 0 0)', color: FG,
@@ -106,8 +109,8 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
         {/* Input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: `1px solid ${BORDER}` }}>
           {nlMode
-            ? <span style={{ color: AI_COLOR, fontSize: 14, lineHeight: 1, flexShrink: 0 }}>✦</span>
-            : <span style={{ color: MUTED, fontSize: 16, flexShrink: 0 }}>⌕</span>
+            ? <span aria-hidden="true" style={{ color: AI_COLOR, fontSize: 14, lineHeight: 1, flexShrink: 0 }}>✦</span>
+            : <span aria-hidden="true" style={{ color: MUTED, fontSize: 16, flexShrink: 0 }}>⌕</span>
           }
           <input
             ref={inputRef}
@@ -115,6 +118,7 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
             onChange={e => setQ(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder="Search demands or ask AI…"
+            aria-label="Search demands or ask AI"
             style={{
               flex: 1, border: 'none', outline: 'none', background: 'transparent',
               color: FG, fontFamily: 'inherit', fontSize: 16, fontWeight: 500,
@@ -140,7 +144,7 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
                 .fd-dot:nth-child(2){animation-delay:.15s}
                 .fd-dot:nth-child(3){animation-delay:.3s}
               `}</style>
-              <span style={{ fontSize: 12, lineHeight: 1 }}>✦</span>
+              <span aria-hidden="true" style={{ fontSize: 12, lineHeight: 1 }}>✦</span>
               <span style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', letterSpacing: 0.4, fontWeight: 700, textTransform: 'uppercase' }}>thinking</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                 <span className="fd-dot" />
@@ -153,7 +157,7 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
           {nlMode && aiAnswer && (
             <div style={{ padding: '14px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, color: AI_COLOR }}>
-                <span style={{ fontSize: 11, lineHeight: 1 }}>✦</span>
+                <span aria-hidden="true" style={{ fontSize: 11, lineHeight: 1 }}>✦</span>
                 <span style={{ fontSize: 10, fontFamily: 'JetBrains Mono, monospace', letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase' }}>
                   FlowDesk IA
                 </span>
@@ -195,6 +199,18 @@ export default function CommandPalette({ demands, flow, onClose, onSelectDemand,
           )}
         </div>
 
+        {/* Visually hidden live region — announces AI results to screen readers */}
+        <div
+          aria-live="polite"
+          aria-atomic="true"
+          style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}
+        >
+          {aiThinking ? 'AI is thinking…' : ''}
+          {aiAnswer && !aiThinking
+            ? `Result: ${aiAnswer.summary}${aiAnswer.demands.length > 0 ? `. ${aiAnswer.demands.length} demand${aiAnswer.demands.length !== 1 ? 's' : ''} found.` : ''}`
+            : ''}
+        </div>
+
         {/* Footer */}
         <div style={{
           padding: '8px 18px', borderTop: `1px solid ${BORDER}`,
@@ -231,7 +247,7 @@ function EmptyState() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {sugg.map(s => (
           <div key={s} style={{ padding: '8px 10px', borderRadius: 5, fontSize: 13, color: MUTED, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: AI_COLOR, fontSize: 11 }}>✦</span>
+            <span aria-hidden="true" style={{ color: AI_COLOR, fontSize: 11 }}>✦</span>
             <span style={{ fontStyle: 'italic' }}>"{s}"</span>
           </div>
         ))}

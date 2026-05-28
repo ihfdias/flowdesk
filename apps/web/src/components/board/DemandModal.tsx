@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../../lib/api'
 import { Demand, Flow, HistoryEntry, Comment } from '../../lib/types'
 import { stageHueFromColor, stageColor } from '../../lib/colors'
@@ -6,6 +6,7 @@ import StageChip from '../primitives/StageChip'
 import Avatar from '../primitives/Avatar'
 import DueDate from '../primitives/DueDate'
 import { useIsMobile } from '../../lib/useIsMobile'
+import { useFocusTrap } from '../../lib/useFocusTrap'
 
 interface Props {
   demand: Demand
@@ -26,6 +27,8 @@ const FG = 'oklch(0.18 0.01 60)'
 export default function DemandModal({ demand, flow, onClose, onAdvance, onArchive }: Props) {
   const isMobile = useIsMobile()
   const hue = stageHueFromColor(demand.currentStage.color, demand.currentStage.order)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(dialogRef, onClose)
 
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [comments, setComments] = useState<Comment[]>([])
@@ -84,6 +87,10 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
   if (isMobile) {
     return (
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="demand-modal-title"
         style={{
           position: 'fixed', inset: 0, zIndex: 100,
           background: 'oklch(1 0 0)', color: FG,
@@ -103,6 +110,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
         }}>
           <button
             onClick={onClose}
+            aria-label="Back"
             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: FG, lineHeight: 1, padding: '4px 4px 4px 0', flexShrink: 0 }}
           >
             ←
@@ -115,7 +123,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
 
         {/* Hero */}
         <div style={{ padding: '20px 18px 16px', background: stageColor(hue, 'softer'), flexShrink: 0 }}>
-          <h1 style={{
+          <h1 id="demand-modal-title" style={{
             margin: 0,
             fontFamily: 'Instrument Serif, serif',
             fontSize: 26, fontWeight: 400, fontStyle: 'italic',
@@ -177,7 +185,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
               opacity: aiThinking ? 0.6 : 1,
             }}
           >
-            <span>✦</span> {aiThinking ? 'thinking…' : 'AI Summary'}
+            <span aria-hidden="true">✦</span> {aiThinking ? 'thinking…' : 'AI Summary'}
           </button>
         </div>
 
@@ -227,6 +235,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
             />
             <button
               type="submit"
+              aria-label="Send comment"
               disabled={submitting || !comment.trim()}
               style={{
                 width: 36, height: 36, borderRadius: '50%', border: 'none',
@@ -236,7 +245,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
                 opacity: submitting || !comment.trim() ? 0.5 : 1, flexShrink: 0,
               }}
             >
-              ↑
+              <span aria-hidden="true">↑</span>
             </button>
           </form>
         </div>
@@ -255,6 +264,10 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="demand-modal-title"
         onClick={e => e.stopPropagation()}
         style={{
           width: '62%', maxWidth: 720, height: '100%',
@@ -280,13 +293,14 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
             <div style={{ flex: 1 }} />
             <button
               onClick={onClose}
+              aria-label="Close"
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: MUTED, lineHeight: 1, padding: 4 }}
             >
               ×
             </button>
           </div>
 
-          <h2 style={{
+          <h2 id="demand-modal-title" style={{
             margin: 0,
             fontFamily: 'Instrument Serif, serif',
             fontSize: 32, fontWeight: 400, fontStyle: 'italic',
@@ -339,7 +353,7 @@ export default function DemandModal({ demand, flow, onClose, onAdvance, onArchiv
           background: 'oklch(0.97 0.02 280)',
           display: 'flex', alignItems: 'center', gap: 12,
         }}>
-          <span style={{ color: 'oklch(0.55 0.20 280)', fontSize: 14, lineHeight: 1 }}>✦</span>
+          <span aria-hidden="true" style={{ color: 'oklch(0.55 0.20 280)', fontSize: 14, lineHeight: 1 }}>✦</span>
           {!aiResult && !aiThinking && (
             <>
               <span style={{ fontSize: 13, color: 'oklch(0.30 0.10 280)', flex: 1 }}>

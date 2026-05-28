@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import api from '../../lib/api'
 import { Flow } from '../../lib/types'
 import Avatar from '../primitives/Avatar'
 import { useIsMobile } from '../../lib/useIsMobile'
+import { useFocusTrap } from '../../lib/useFocusTrap'
 
 interface Member {
   id: string
@@ -22,6 +23,9 @@ const ACCENT = 'oklch(0.62 0.20 28)'
 
 export default function FlowSettingsModal({ flow, onClose }: Props) {
   const isMobile = useIsMobile()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(dialogRef, onClose)
+
   const [members, setMembers] = useState<Member[]>([])
   const [loadingMembers, setLoadingMembers] = useState(true)
   const [email, setEmail] = useState('')
@@ -75,6 +79,10 @@ export default function FlowSettingsModal({ flow, onClose }: Props) {
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="flow-settings-title"
         onClick={e => e.stopPropagation()}
         style={{
           width: isMobile ? 'calc(100vw - 32px)' : 520, background: 'oklch(1 0 0)',
@@ -98,12 +106,13 @@ export default function FlowSettingsModal({ flow, onClose }: Props) {
             </span>
             <button
               onClick={onClose}
+              aria-label="Close"
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: MUTED, lineHeight: 1, padding: '0 2px' }}
             >
               ×
             </button>
           </div>
-          <h2 style={{
+          <h2 id="flow-settings-title" style={{
             margin: 0,
             fontFamily: 'Instrument Serif, serif',
             fontSize: 28, fontWeight: 400, fontStyle: 'italic',
@@ -176,6 +185,7 @@ export default function FlowSettingsModal({ flow, onClose }: Props) {
           <form onSubmit={handleAdd} style={{ display: 'flex', gap: 8 }}>
             <input
               type="email"
+              aria-label="Invite member by email"
               value={email}
               onChange={e => { setEmail(e.target.value); setAddError(null) }}
               placeholder="email@example.com"

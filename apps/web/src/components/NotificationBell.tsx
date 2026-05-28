@@ -71,6 +71,8 @@ export default function NotificationBell() {
     <div ref={ref} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen(o => !o)}
+        aria-label={count > 0 ? `Notifications, ${count} unread` : 'Notifications'}
+        aria-expanded={open}
         style={{
           position: 'relative',
           background: 'none', border: `1px solid ${BORDER}`,
@@ -79,9 +81,9 @@ export default function NotificationBell() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        <span style={{ fontSize: 14 }}>🔔</span>
+        <span aria-hidden="true" style={{ fontSize: 14 }}>🔔</span>
         {count > 0 && (
-          <span style={{
+          <span aria-hidden="true" style={{
             position: 'absolute', top: -5, right: -5,
             background: 'oklch(0.55 0.22 15)',
             color: '#fff', borderRadius: '50%',

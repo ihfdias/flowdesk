@@ -321,6 +321,7 @@ export default function BoardPage() {
         {/* Sign out */}
         <button
           onClick={logout}
+          aria-label="Sign out"
           style={{
             background: 'none', border: `1px solid ${C.border}`,
             borderRadius: 6, padding: isMobile ? '5px 8px' : '5px 12px',
@@ -329,7 +330,7 @@ export default function BoardPage() {
             letterSpacing: 0.4, textTransform: 'uppercase', flexShrink: 0,
           }}
         >
-          {isMobile ? '↩' : 'Sign out'}
+          {isMobile ? <span aria-hidden="true">↩</span> : 'Sign out'}
         </button>
       </header>
 
@@ -478,7 +479,7 @@ export default function BoardPage() {
                 <div style={{ padding: '4px 4px 8px', borderBottom: `1px dashed ${C.border}` }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ color: stageColor(hue, 'solid'), fontSize: 14 }}>{glyph}</span>
+                      <span aria-hidden="true" style={{ color: stageColor(hue, 'solid'), fontSize: 14 }}>{glyph}</span>
                       <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: -0.2 }}>{stage.name}</span>
                     </div>
                     <span style={{
@@ -808,7 +809,7 @@ function AIBlockerBanner({ demand, daysOld, onView, onDismiss }: {
         display: 'flex', alignItems: 'center', gap: 12,
         animation: 'ndIn .2s cubic-bezier(.2,.7,.3,1)',
       }}>
-        <span style={{ color: 'oklch(0.55 0.20 280)', fontSize: 14, flexShrink: 0 }}>✦</span>
+        <span aria-hidden="true" style={{ color: 'oklch(0.55 0.20 280)', fontSize: 14, flexShrink: 0 }}>✦</span>
         <span style={{
           fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
           letterSpacing: 0.5, fontWeight: 700, textTransform: 'uppercase',

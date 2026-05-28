@@ -3,6 +3,7 @@ import api from '../../lib/api'
 import { Flow, User } from '../../lib/types'
 import { useIsMobile } from '../../lib/useIsMobile'
 import Spinner from '../primitives/Spinner'
+import { useFocusTrap } from '../../lib/useFocusTrap'
 
 interface Props {
   flow: Flow
@@ -30,6 +31,8 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [suggestingAI, setSuggestingAI] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(dialogRef, onClose)
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -113,7 +116,14 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
         @keyframes ndIn{from{transform:scale(.96) translateY(8px);opacity:0}to{transform:scale(1);opacity:1}}
         @keyframes ndUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
       `}</style>
-      <div onClick={e => e.stopPropagation()} style={sheetStyle}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-demand-title"
+        onClick={e => e.stopPropagation()}
+        style={sheetStyle}
+      >
 
         {/* Mobile drag handle */}
         {isMobile && (
@@ -134,13 +144,14 @@ export default function NewDemandModal({ flow, members = [], onClose, onCreated 
             {!isMobile && (
               <button
                 onClick={onClose}
+                aria-label="Close"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: MUTED, lineHeight: 1, padding: '0 2px' }}
               >
                 ×
               </button>
             )}
           </div>
-          <h2 style={{
+          <h2 id="new-demand-title" style={{
             margin: 0,
             fontFamily: 'Instrument Serif, serif',
             fontSize: isMobile ? 24 : 28, fontWeight: 400, fontStyle: 'italic',
