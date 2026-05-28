@@ -3,7 +3,7 @@ import { z } from 'zod'
 import {
   createFlow, listFlows, getFlowById, updateFlow, deleteFlow,
   createStage, updateStage, deleteStage,
-  listMembers, addMember, removeMember,
+  listMembers, addMember, removeMember, getFlowAnalytics,
 } from '../services/flow-service'
 
 const createFlowSchema = z.object({
@@ -108,4 +108,9 @@ export async function editStage(req: Request, res: Response): Promise<void> {
 export async function removeStage(req: Request, res: Response): Promise<void> {
   await deleteStage(String(req.params.stageId), req.user.id)
   res.status(204).send()
+}
+
+export async function analytics(req: Request, res: Response): Promise<void> {
+  const data = await getFlowAnalytics(String(req.params.id), req.user.id)
+  res.status(200).json(data)
 }

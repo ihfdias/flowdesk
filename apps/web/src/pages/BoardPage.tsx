@@ -351,6 +351,21 @@ export default function BoardPage() {
           </button>
         )}
 
+        {/* Reports — desktop only */}
+        {!isMobile && selectedFlow && (
+          <button
+            onClick={() => navigate(`/reports?flowId=${selectedFlow.id}`)}
+            style={{
+              background: 'transparent', color: C.fg,
+              border: `1px solid ${C.border}`, padding: '7px 12px', borderRadius: 6,
+              fontFamily: 'inherit', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              letterSpacing: -0.1,
+            }}
+          >
+            Reports
+          </button>
+        )}
+
         {/* New demand — desktop only */}
         {!isMobile && (
           <button

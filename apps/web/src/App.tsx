@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage'
 import BoardPage from './pages/BoardPage'
 import FlowEditorPage from './pages/FlowEditorPage'
 import OnboardingPage from './pages/OnboardingPage'
+import ReportsPage from './pages/ReportsPage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -37,6 +38,14 @@ export default function App() {
         element={
           <PrivateRoute>
             <OnboardingPage />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <PrivateRoute>
+            <ReportsPage />
           </PrivateRoute>
         }
       />

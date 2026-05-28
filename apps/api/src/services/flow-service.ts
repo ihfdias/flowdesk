@@ -153,3 +153,119 @@ export async function deleteStage(stageId: string, userId: string) {
   if (stage.demands.length > 0) throw new AppError(409, 'Cannot delete a stage with active demands')
   await prisma.stage.delete({ where: { id: stageId } })
 }
+
+export async function getFlowAnalytics(flowId: string, userId: string) {
+  const flow = await prisma.flow.findFirst({
+    where: {
+      id: flowId,
+      OR: [{ createdById: userId }, { members: { some: { userId } } }],
+    },
+    include: { stages: { orderBy: { order: 'asc' } } },
+  })
+  if (!flow) throw new AppError(404, 'Flow not found')
+
+  const [allDemands, history] = await Promise.all([
+    prisma.demand.findMany({
+      where: { flowId },
+      select: {
+        id: true, priority: true, tag: true,
+        currentStageId: true, archived: true, createdAt: true,
+        assignedTo: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.demandHistory.findMany({
+      where: { demand: { flowId } },
+      select: { demandId: true, fromStageId: true, toStageId: true, movedAt: true },
+      orderBy: { movedAt: 'asc' },
+    }),
+  ])
+
+  const active = allDemands.filter(d => !d.archived)
+
+  // demands by stage (active only)
+  const stageCounts = new Map(flow.stages.map(s => [s.id, 0]))
+  for (const d of active) stageCounts.set(d.currentStageId, (stageCounts.get(d.currentStageId) ?? 0) + 1)
+  const demandsByStage = flow.stages.map(s => ({ stageId: s.id, stageName: s.name, color: s.color, order: s.order, count: stageCounts.get(s.id) ?? 0 }))
+
+  // demands by priority (active)
+  const priCounts: Record<string, number> = {}
+  for (const d of active) { const p = d.priority ?? 'none'; priCounts[p] = (priCounts[p] ?? 0) + 1 }
+  const demandsByPriority = Object.entries(priCounts).map(([priority, count]) => ({ priority, count })).sort((a, b) => b.count - a.count)
+
+  // demands by tag (active)
+  const tagCounts: Record<string, number> = {}
+  for (const d of active) { if (d.tag) tagCounts[d.tag] = (tagCounts[d.tag] ?? 0) + 1 }
+  const demandsByTag = Object.entries(tagCounts).map(([tag, count]) => ({ tag, count })).sort((a, b) => b.count - a.count)
+
+  // assignee workload (active, assigned)
+  const workload = new Map<string, { name: string; count: number }>()
+  for (const d of active) {
+    if (!d.assignedTo) continue
+    const cur = workload.get(d.assignedTo.id)
+    if (cur) cur.count++; else workload.set(d.assignedTo.id, { name: d.assignedTo.name, count: 1 })
+  }
+  const assigneeWorkload = [...workload.values()].sort((a, b) => b.count - a.count)
+
+  // average days per stage (from history — only completed stage visits)
+  const byDemand = new Map<string, typeof history>()
+  for (const h of history) {
+    if (!byDemand.has(h.demandId)) byDemand.set(h.demandId, [])
+    byDemand.get(h.demandId)!.push(h)
+  }
+  const stageTimes: Record<string, number[]> = {}
+  for (const entries of byDemand.values()) {
+    for (let i = 1; i < entries.length; i++) {
+      const stageId = entries[i].fromStageId
+      if (!stageId) continue
+      const ms = entries[i].movedAt.getTime() - entries[i - 1].movedAt.getTime()
+      if (ms > 0) { if (!stageTimes[stageId]) stageTimes[stageId] = []; stageTimes[stageId].push(ms) }
+    }
+  }
+  const avgDaysPerStage = flow.stages.map(s => ({
+    stageId: s.id, stageName: s.name, color: s.color, order: s.order,
+    avgDays: stageTimes[s.id]
+      ? Number((stageTimes[s.id].reduce((a, b) => a + b, 0) / stageTimes[s.id].length / 86400000).toFixed(1))
+      : null as number | null,
+  }))
+
+  // created by week (last 8 ISO weeks, all demands including archived)
+  const weekLabels = getLast8WeekLabels()
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 56)
+  const weekCounts: Record<string, number> = {}
+  for (const d of allDemands.filter(d => d.createdAt >= cutoff)) {
+    const w = toWeekLabel(d.createdAt)
+    weekCounts[w] = (weekCounts[w] ?? 0) + 1
+  }
+  const createdByWeek = weekLabels.map(week => ({ week, count: weekCounts[week] ?? 0 }))
+
+  return {
+    totalActive: active.length,
+    totalArchived: allDemands.length - active.length,
+    demandsByStage,
+    demandsByPriority,
+    demandsByTag,
+    assigneeWorkload,
+    avgDaysPerStage,
+    createdByWeek,
+  }
+}
+
+function toWeekLabel(date: Date): string {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + 4 - (d.getDay() || 7))
+  const year = d.getFullYear()
+  const jan1 = new Date(year, 0, 1)
+  const week = Math.ceil(((d.getTime() - jan1.getTime()) / 86400000 + 1) / 7)
+  return `${year}-W${String(week).padStart(2, '0')}`
+}
+
+function getLast8WeekLabels(): string[] {
+  const labels: string[] = []
+  for (let i = 7; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i * 7)
+    labels.push(toWeekLabel(d))
+  }
+  return [...new Set(labels)].slice(-8)
+}
