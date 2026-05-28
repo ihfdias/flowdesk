@@ -2,7 +2,7 @@ import { Request, Response } from 'express'
 import { z } from 'zod'
 import { createDemand, listDemands, getDemandById, advanceDemand, moveDemand, createComment, archiveDemand } from '../services/demand-service'
 
-const createDemandSchema = z.object({
+export const createDemandSchema = z.object({
   title: z.string().min(2),
   description: z.string().optional(),
   tag: z.string().optional(),
