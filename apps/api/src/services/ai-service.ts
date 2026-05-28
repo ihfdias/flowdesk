@@ -1,4 +1,5 @@
 import prisma from '../prisma/client'
+import { AppError } from '../errors/app-error'
 
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://localhost:11434'
 const MODEL = 'llama3.2:1b'
@@ -62,7 +63,7 @@ async function callOllama(prompt: string, opts: { json?: boolean } = {}): Promis
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`Ollama returned ${res.status}`)
+  if (!res.ok) throw new AppError(503, `Ollama returned ${res.status}`)
   const data = await res.json() as { response: string }
   return data.response.trim()
 }
@@ -121,7 +122,7 @@ export async function summarizeDemand(demandId: string, userId: string): Promise
     },
   })
 
-  if (!demand) throw new Error('Demand not found')
+  if (!demand) throw new AppError(404, 'Demand not found')
 
   // Monta contexto textual para o modelo
   const lines: string[] = [

@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import prisma from '../prisma/client'
 import { Role } from '../generated/prisma/enums'
+import { AppError } from '../errors/app-error'
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'fallback-secret'
 const SALT_ROUNDS = 10
@@ -31,7 +32,7 @@ interface AuthResult {
 export async function registerUser({ name, email, password, role = Role.MEMBER }: RegisterInput): Promise<AuthResult> {
   const existing = await prisma.user.findUnique({ where: { email } })
   if (existing) {
-    throw new Error('Email already registered')
+    throw new AppError(409, 'Email already registered')
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
@@ -52,12 +53,12 @@ export async function loginUser({ email, password }: LoginInput): Promise<AuthRe
   const user = await prisma.user.findUnique({ where: { email } })
 
   if (!user) {
-    throw new Error('Invalid credentials')
+    throw new AppError(401, 'Invalid credentials')
   }
 
   const passwordMatch = await bcrypt.compare(password, user.passwordHash)
   if (!passwordMatch) {
-    throw new Error('Invalid credentials')
+    throw new AppError(401, 'Invalid credentials')
   }
 
   const token = jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' })
