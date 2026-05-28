@@ -63,6 +63,10 @@ export default function BoardPage() {
   const [showNewFlow, setShowNewFlow] = useState(false)
   const [showFlowSettings, setShowFlowSettings] = useState(false)
   const [activeMobileStageId, setActiveMobileStageId] = useState<string | null>(null)
+  const [filterAssignees, setFilterAssignees] = useState<Set<string>>(new Set())
+  const [filterPriorities, setFilterPriorities] = useState<Set<string>>(new Set())
+  const [filterTags, setFilterTags] = useState<Set<string>>(new Set())
+  const [filterDue, setFilterDue] = useState<'overdue' | 'today' | 'week' | null>(null)
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -98,6 +102,10 @@ export default function BoardPage() {
   useEffect(() => {
     if (!selectedFlow) { setMembers([]); return }
     setDemandsLoading(true)
+    setFilterAssignees(new Set())
+    setFilterPriorities(new Set())
+    setFilterTags(new Set())
+    setFilterDue(null)
     api.get(`/api/demands?flowId=${selectedFlow.id}`)
       .then(res => setDemands(res.data))
       .finally(() => setDemandsLoading(false))
@@ -169,6 +177,47 @@ export default function BoardPage() {
     return candidates[0] ?? null
   }, [demands, selectedFlow, demandsLoading, dismissedBannerIds])
 
+  const toggleAssignee = useCallback((id: string) => {
+    setFilterAssignees(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
+  }, [])
+  const togglePriority = useCallback((p: string) => {
+    setFilterPriorities(prev => { const s = new Set(prev); s.has(p) ? s.delete(p) : s.add(p); return s })
+  }, [])
+  const toggleTag = useCallback((t: string) => {
+    setFilterTags(prev => { const s = new Set(prev); s.has(t) ? s.delete(t) : s.add(t); return s })
+  }, [])
+  const clearFilters = useCallback(() => {
+    setFilterAssignees(new Set()); setFilterPriorities(new Set()); setFilterTags(new Set()); setFilterDue(null)
+  }, [])
+
+  const isFiltered = filterAssignees.size > 0 || filterPriorities.size > 0 || filterTags.size > 0 || filterDue !== null
+
+  const availableTags = useMemo(() =>
+    Array.from(new Set(demands.map(d => d.tag).filter(Boolean) as string[])).sort()
+  , [demands])
+
+  const filteredDemands = useMemo(() => {
+    return demands.filter(d => {
+      if (filterAssignees.size > 0 && (!d.assignedTo || !filterAssignees.has(d.assignedTo.id))) return false
+      if (filterPriorities.size > 0 && !filterPriorities.has(d.priority ?? '')) return false
+      if (filterTags.size > 0 && !filterTags.has(d.tag ?? '')) return false
+      if (filterDue) {
+        const today = new Date(); today.setHours(0, 0, 0, 0)
+        const due = d.dueDate ? new Date(d.dueDate) : null
+        if (filterDue === 'overdue') { if (!due || due >= today) return false }
+        if (filterDue === 'today') {
+          const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1)
+          if (!due || due < today || due >= tomorrow) return false
+        }
+        if (filterDue === 'week') {
+          const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7)
+          if (!due || due < today || due >= weekEnd) return false
+        }
+      }
+      return true
+    })
+  }, [demands, filterAssignees, filterPriorities, filterTags, filterDue])
+
   const handleAdvance = useCallback(async (demandId: string) => {
     // capture pre-advance position to detect last-stage arrival
     const demand = demands.find(d => d.id === demandId)
@@ -207,7 +256,7 @@ export default function BoardPage() {
   }, [showToast])
 
   const activeStageDemands = activeMobileStageId
-    ? demands.filter(d => d.currentStageId === activeMobileStageId)
+    ? filteredDemands.filter(d => d.currentStageId === activeMobileStageId)
     : []
 
   if (loading) return <BoardSkeleton />
@@ -367,7 +416,7 @@ export default function BoardPage() {
           <div style={{ display: 'flex', gap: 6, padding: '8px 14px 10px', minWidth: 'max-content' }}>
             {selectedFlow.stages.map(stage => {
               const hue = stageHueFromColor(stage.color, stage.order)
-              const count = demands.filter(d => d.currentStageId === stage.id).length
+              const count = filteredDemands.filter(d => d.currentStageId === stage.id).length
               const active = activeMobileStageId === stage.id
               return (
                 <button
@@ -390,6 +439,25 @@ export default function BoardPage() {
             })}
           </div>
         </div>
+      )}
+
+      {/* ── Filter bar ── */}
+      {selectedFlow && (
+        <FilterBar
+          members={members}
+          availableTags={availableTags}
+          filterAssignees={filterAssignees}
+          onToggleAssignee={toggleAssignee}
+          filterPriorities={filterPriorities}
+          onTogglePriority={togglePriority}
+          filterTags={filterTags}
+          onToggleTag={toggleTag}
+          filterDue={filterDue}
+          onSetDue={setFilterDue}
+          isFiltered={isFiltered}
+          onClear={clearFilters}
+          compact={isMobile}
+        />
       )}
 
       {/* ── Board — mobile: card list / desktop: kanban ── */}
@@ -454,7 +522,7 @@ export default function BoardPage() {
           {selectedFlow?.stages.map(stage => {
             const hue = stageHueFromColor(stage.color, stage.order)
             const glyph = getGlyph(stage.order)
-            const stageDemands = demands.filter(d => d.currentStageId === stage.id)
+            const stageDemands = filteredDemands.filter(d => d.currentStageId === stage.id)
             const isOver = dragOverStage === stage.id
 
             return (
@@ -928,4 +996,252 @@ function BoardSkeleton() {
       </div>
     </div>
   )
+}
+
+// ─── Filter bar ───────────────────────────────────────────────────────────────
+
+interface FilterBarProps {
+  members: User[]
+  availableTags: string[]
+  filterAssignees: Set<string>
+  onToggleAssignee: (id: string) => void
+  filterPriorities: Set<string>
+  onTogglePriority: (p: string) => void
+  filterTags: Set<string>
+  onToggleTag: (t: string) => void
+  filterDue: 'overdue' | 'today' | 'week' | null
+  onSetDue: (v: 'overdue' | 'today' | 'week' | null) => void
+  isFiltered: boolean
+  onClear: () => void
+  compact: boolean
+}
+
+function FilterBar({
+  members, availableTags,
+  filterAssignees, onToggleAssignee,
+  filterPriorities, onTogglePriority,
+  filterTags, onToggleTag,
+  filterDue, onSetDue,
+  isFiltered, onClear,
+  compact,
+}: FilterBarProps) {
+  const [dueOpen, setDueOpen] = useState(false)
+  const dueRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!dueOpen) return
+    const handler = (e: MouseEvent) => {
+      if (dueRef.current && !dueRef.current.contains(e.target as Node)) setDueOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [dueOpen])
+
+  const hPad = compact ? '0 14px' : '0 32px'
+  const dueLabel = filterDue === 'overdue' ? 'Overdue' : filterDue === 'today' ? 'Due today' : filterDue === 'week' ? 'This week' : 'Due date'
+
+  return (
+    <div style={{ padding: hPad, borderBottom: `1px solid ${C.border}`, flexShrink: 0, overflowX: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 0', minWidth: 'max-content' }}>
+
+        {/* Assignees */}
+        {members.length > 0 && (
+          <>
+            {members.map(m => (
+              <AssigneeChip
+                key={m.id}
+                member={m}
+                active={filterAssignees.has(m.id)}
+                onToggle={() => onToggleAssignee(m.id)}
+              />
+            ))}
+            <FilterDivider />
+          </>
+        )}
+
+        {/* Priority */}
+        {(['high', 'medium', 'low'] as const).map(p => (
+          <PriorityChip
+            key={p}
+            priority={p}
+            active={filterPriorities.has(p)}
+            onToggle={() => onTogglePriority(p)}
+          />
+        ))}
+
+        {/* Tags */}
+        {availableTags.length > 0 && (
+          <>
+            <FilterDivider />
+            {availableTags.map(t => (
+              <TagChip
+                key={t}
+                tag={t}
+                active={filterTags.has(t)}
+                onToggle={() => onToggleTag(t)}
+              />
+            ))}
+          </>
+        )}
+
+        {/* Due date */}
+        <FilterDivider />
+        <div ref={dueRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => setDueOpen(o => !o)}
+            aria-expanded={dueOpen}
+            aria-haspopup="listbox"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '4px 10px', borderRadius: 999, fontSize: 11,
+              border: `1px solid ${filterDue ? C.fg : C.border}`,
+              background: filterDue ? C.fg : 'transparent',
+              color: filterDue ? 'oklch(0.98 0 0)' : C.muted,
+              fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer',
+              fontWeight: filterDue ? 700 : 500, letterSpacing: 0.3,
+              transition: 'all .12s',
+            }}
+          >
+            {dueLabel}
+            <span aria-hidden="true" style={{ fontSize: 8 }}>▾</span>
+          </button>
+
+          {dueOpen && (
+            <div
+              role="listbox"
+              aria-label="Filter by due date"
+              style={{
+                position: 'absolute', top: 'calc(100% + 4px)', left: 0,
+                background: 'oklch(1 0 0)', border: `1px solid ${C.border}`,
+                borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,.1)',
+                overflow: 'hidden', zIndex: 60, minWidth: 130,
+              }}
+            >
+              {([
+                ['overdue', 'Overdue'],
+                ['today',   'Due today'],
+                ['week',    'This week'],
+              ] as const).map(([val, label]) => (
+                <button
+                  key={val}
+                  role="option"
+                  aria-selected={filterDue === val}
+                  onClick={() => { onSetDue(filterDue === val ? null : val); setDueOpen(false) }}
+                  style={{
+                    width: '100%', padding: '8px 12px', border: 'none', cursor: 'pointer',
+                    textAlign: 'left',
+                    background: filterDue === val ? 'oklch(0.95 0.005 60)' : 'transparent',
+                    fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: C.fg,
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  }}
+                  onMouseEnter={e => { if (filterDue !== val) e.currentTarget.style.background = 'oklch(0.97 0.003 80)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = filterDue === val ? 'oklch(0.95 0.005 60)' : 'transparent' }}
+                >
+                  <span>{label}</span>
+                  {filterDue === val && <span style={{ color: 'oklch(0.62 0.20 28)', fontSize: 10 }}>✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Clear filters */}
+        {isFiltered && (
+          <button
+            onClick={onClear}
+            style={{
+              marginLeft: 6, display: 'flex', alignItems: 'center', gap: 4,
+              padding: '4px 10px', borderRadius: 999, fontSize: 11,
+              border: '1px solid oklch(0.85 0.04 28)',
+              background: 'oklch(0.97 0.03 28)',
+              color: 'oklch(0.55 0.18 28)',
+              fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer',
+              fontWeight: 600, letterSpacing: 0.3,
+            }}
+          >
+            <span aria-hidden="true">×</span> Clear filters
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function AssigneeChip({ member, active, onToggle }: { member: User; active: boolean; onToggle: () => void }) {
+  const initials = member.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  let h = 0
+  for (let i = 0; i < member.name.length; i++) h = member.name.charCodeAt(i) + ((h << 5) - h)
+  const hue = Math.abs(h) % 360
+  return (
+    <button
+      onClick={onToggle}
+      title={member.name}
+      aria-pressed={active}
+      aria-label={`Filter by ${member.name}`}
+      style={{
+        width: 26, height: 26, borderRadius: '50%', border: 'none',
+        background: active
+          ? `linear-gradient(135deg, oklch(0.72 0.14 ${hue}), oklch(0.55 0.18 ${(hue + 40) % 360}))`
+          : 'oklch(0.90 0.005 60)',
+        color: active ? '#fff' : C.muted,
+        outline: active ? `2px solid oklch(0.62 0.20 28)` : '2px solid transparent',
+        outlineOffset: 1,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 9, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+        cursor: 'pointer', letterSpacing: 0.3,
+        transition: 'all .12s',
+      }}
+    >
+      {initials}
+    </button>
+  )
+}
+
+function PriorityChip({ priority, active, onToggle }: { priority: 'high' | 'medium' | 'low'; active: boolean; onToggle: () => void }) {
+  const dotColor   = priority === 'high' ? 'oklch(0.55 0.22 15)'  : priority === 'medium' ? 'oklch(0.72 0.17 45)'  : 'oklch(0.72 0.04 240)'
+  const activeBg   = priority === 'high' ? 'oklch(0.95 0.06 15)'  : priority === 'medium' ? 'oklch(0.97 0.06 45)'  : 'oklch(0.95 0.04 240)'
+  const activeBdr  = priority === 'high' ? 'oklch(0.65 0.12 15)'  : priority === 'medium' ? 'oklch(0.72 0.12 45)'  : 'oklch(0.65 0.08 240)'
+  return (
+    <button
+      onClick={onToggle}
+      aria-pressed={active}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 5,
+        padding: '4px 10px', borderRadius: 999, fontSize: 11,
+        border: `1px solid ${active ? activeBdr : C.border}`,
+        background: active ? activeBg : 'transparent',
+        color: active ? C.fg : C.muted,
+        fontFamily: 'inherit', cursor: 'pointer',
+        fontWeight: active ? 700 : 500, textTransform: 'capitalize',
+        transition: 'all .12s',
+      }}
+    >
+      <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0, display: 'inline-block' }} />
+      {priority}
+    </button>
+  )
+}
+
+function TagChip({ tag, active, onToggle }: { tag: string; active: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      aria-pressed={active}
+      style={{
+        padding: '4px 10px', borderRadius: 999, fontSize: 11,
+        border: `1px solid ${active ? C.fg : C.border}`,
+        background: active ? C.fg : 'transparent',
+        color: active ? 'oklch(0.98 0 0)' : C.muted,
+        fontFamily: 'JetBrains Mono, monospace', cursor: 'pointer',
+        fontWeight: active ? 700 : 500, letterSpacing: 0.3,
+        transition: 'all .12s',
+      }}
+    >
+      {tag}
+    </button>
+  )
+}
+
+function FilterDivider() {
+  return <span style={{ width: 1, height: 14, background: C.border, flexShrink: 0, margin: '0 6px' }} />
 }
